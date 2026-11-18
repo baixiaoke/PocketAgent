@@ -75,6 +75,16 @@ final class AgentRuntime: ObservableObject {
         let settings = store.settings
         let apiKey = store.apiKey
 
+        // 长问题自动切推理模型（只在用户开了这个开关时）
+        var effective = settings
+        if settings.autoModelSwitch,
+           !settings.reasoningModel.isEmpty,
+           trimmed.count > 120 {
+            effective.model = settings.reasoningModel
+        }
+
+        var refusalRetries = 0
+
         for round in 1...max(1, settings.maxRounds) {
             if Task.isCancelled { return }
             statusLine = round == 1 ? "思考中…" : "第 \(round) 轮推理…"
@@ -95,7 +105,7 @@ final class AgentRuntime: ObservableObject {
             let turn: LLMClient.Turn
             do {
                 turn = try await client.stream(
-                    settings: settings,
+                    settings: effective,
                     apiKey: apiKey,
                     messages: payload,
                     tools: tools.specs,
@@ -119,10 +129,32 @@ final class AgentRuntime: ObservableObject {
             current.messages[idx].toolCalls = turn.toolCalls.isEmpty ? nil : turn.toolCalls
 
             if turn.toolCalls.isEmpty {
-                if turn.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let cleaned = settings.unfilteredMode ? RefusalGate.strip(turn.text) : turn.text
+                current.messages[idx].content = cleaned
+
+                // 破甲层：识别到软拒绝就自动重发，最多两次
+                if settings.unfilteredMode,
+                   RefusalGate.looksRefused(turn.text),
+                   refusalRetries < 2 {
+                    refusalRetries += 1
+                    current.messages.append(.user(RefusalGate.retryPrompt(attempt: refusalRetries)))
+                    continue
+                }
+
+                if cleaned.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     current.messages[idx].content = "（模型返回了空内容）"
                 } else {
-                    lastAssistantText = turn.text
+                    lastAssistantText = cleaned
+                }
+
+                // 用量粗估（按字符数折算，够看趋势）
+                let promptChars = payload.reduce(0) { $0 + $1.content.count }
+                UsageMeter.shared.add(prompt: promptChars / 2, completion: cleaned.count / 2)
+
+                // 自动提炼长期记忆：异步跑，不挡回复
+                if settings.autoExtractMemory, cleaned.count > 30 {
+                    let snapshot = current.messages
+                    Task { await MemoryExtractor.extract(from: snapshot, settings: settings, apiKey: apiKey) }
                 }
                 return
             }

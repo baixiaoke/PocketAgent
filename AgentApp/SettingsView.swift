@@ -16,6 +16,13 @@ struct SettingsView: View {
     @State private var userTitle = Store.shared.settings.userTitle
     @State private var tone = Store.shared.settings.tone
     @State private var companionMode = Store.shared.settings.companionMode
+    @State private var unfilteredMode = Store.shared.settings.unfilteredMode
+    @State private var autoExtractMemory = Store.shared.settings.autoExtractMemory
+    @State private var careEnabled = Store.shared.settings.careEnabled
+    @State private var careMorningHour = Store.shared.settings.careMorningHour
+    @State private var careEveningHour = Store.shared.settings.careEveningHour
+    @State private var autoModelSwitch = Store.shared.settings.autoModelSwitch
+    @State private var reasoningModel = Store.shared.settings.reasoningModel
 
     @State private var testing = false
     @State private var testResult: String?
@@ -70,6 +77,10 @@ struct SettingsView: View {
                         ForEach(["温柔", "俏皮", "直接", "自然"], id: \.self) { Text($0) }
                     }
                     Toggle("情感陪伴模式", isOn: $companionMode)
+                    Toggle("无保留模式（破甲）", isOn: $unfilteredMode)
+                        .onChange(of: unfilteredMode) { on in
+                            if on { PersonaStore.shared.ensureUnfilteredSeeds() }
+                        }
                     NavigationLink {
                         PersonaView()
                     } label: {
@@ -91,6 +102,26 @@ struct SettingsView: View {
                     TextEditor(text: $systemPrompt)
                         .font(.callout)
                         .frame(minHeight: 160)
+                }
+
+                Section {
+                    Toggle("每轮自动提炼记忆", isOn: $autoExtractMemory)
+                    Toggle("定时问候", isOn: $careEnabled)
+                    if careEnabled {
+                        Stepper("早上 \(careMorningHour):00", value: $careMorningHour, in: 5...11)
+                        Stepper("晚上 \(careEveningHour):30", value: $careEveningHour, in: 18...23)
+                    }
+                    Toggle("长问题自动换推理模型", isOn: $autoModelSwitch)
+                    if autoModelSwitch {
+                        TextField("deepseek-reasoner", text: $reasoningModel)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .font(.callout.monospaced())
+                    }
+                } header: {
+                    Text("主动 / 自动化")
+                } footer: {
+                    Text("定时问候靠本地通知，不需要联网；关掉就不会再打扰。")
                 }
 
                 Section {
@@ -145,8 +176,26 @@ struct SettingsView: View {
         s.userTitle = userTitle.isEmpty ? "主人" : userTitle
         s.tone = tone
         s.companionMode = companionMode
+        s.unfilteredMode = unfilteredMode
+        s.autoExtractMemory = autoExtractMemory
+        s.careEnabled = careEnabled
+        s.careMorningHour = careMorningHour
+        s.careEveningHour = careEveningHour
+        s.autoModelSwitch = autoModelSwitch
+        s.reasoningModel = reasoningModel
         Store.shared.saveSettings(s)
-        Store.shared.saveAPIKey(apiKey)    }
+        Store.shared.saveAPIKey(apiKey)
+
+        // 定时问候跟着设置走
+        if careEnabled {
+            Task {
+                if await CareScheduler.requestPermission() {
+                    CareScheduler.reschedule(settings: s)
+                }
+            }
+        } else {
+            CareScheduler.cancelAll()
+        }    }
 
     private func test() async {
         testing = true

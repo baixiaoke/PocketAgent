@@ -81,6 +81,27 @@ final class ToolRegistry {
             ToolSpec(name: "recall",
                      description: "在长期记忆里检索。用户问「你还记得…」时先调它。",
                      parameters: obj(["query": str("关键词，可为空表示看全部")], required: [])),
+
+            ToolSpec(name: "web_read",
+                     description: "抓网页并只留正文（去掉导航、广告、脚本），比 http_get 干净。读文章用它。",
+                     parameters: obj(["url": str("完整 URL")], required: ["url"])),
+
+            ToolSpec(name: "weather",
+                     description: "查当前位置或指定城市的天气。不传城市就用设备定位。",
+                     parameters: obj(["city": str("城市名，可为空")], required: [])),
+
+            ToolSpec(name: "where_am_i",
+                     description: "获取设备当前所在城市（需定位权限）。",
+                     parameters: obj([:], required: [])),
+
+            ToolSpec(name: "kb_index",
+                     description: "把用户授权的外部文件夹重建索引，供 kb_search 检索。文件夹没授权就提示用户去连接。",
+                     parameters: obj([:], required: [])),
+
+            ToolSpec(name: "kb_search",
+                     description: "在本地知识库里检索用户文档的片段。问「我那份文件里怎么写的」时用它。",
+                     parameters: obj(["query": str("要查的内容"), "limit": num("返回几条，默认 5")],
+                                     required: ["query"])),
         ]
     }
 
@@ -226,6 +247,72 @@ final class ToolRegistry {
                 if hits.isEmpty { return ("没有相关记忆。", false) }
                 let lines = hits.map { "- \($0.text)（\($0.when)）" }
                 return ("记得这些：\n" + lines.joined(separator: "\n"), false)
+
+            case "web_read":
+                guard let raw = args["url"] as? String, let url = URL(string: raw) else {
+                    return ("URL 不合法", true)
+                }
+                var req = URLRequest(url: url)
+                req.timeoutInterval = 25
+                req.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
+                do {
+                    let (data, resp) = try await URLSession.shared.data(for: req)
+                    let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+                    let html = String(data: data, encoding: .utf8) ?? ""
+                    let body = WebText.extract(html)
+                    return ("HTTP \(code) · 正文 \(body.count) 字\n\n" + String(body.prefix(12_000)), false)
+                } catch {
+                    return ("抓取失败：\(error.localizedDescription)", true)
+                }
+
+            case "weather":
+                if let city = args["city"] as? String, !city.isEmpty {
+                    let url = "https://wttr.in/\(city.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? city)?format=%25l:+%25c+%25t+(%25f)+%25w+%25h&lang=zh"
+                    if let u = URL(string: url) {
+                        var req = URLRequest(url: u); req.timeoutInterval = 15
+                        req.setValue("curl/8", forHTTPHeaderField: "User-Agent")
+                        if let (d, _) = try? await URLSession.shared.data(for: req),
+                           let t = String(data: d, encoding: .utf8), !t.isEmpty {
+                            return (t.trimmingCharacters(in: .whitespacesAndNewlines), false)
+                        }
+                    }
+                    return ("天气服务暂时不可用", true)
+                }
+                guard let loc = await LocationBox.shared.current() else {
+                    return ("拿不到定位。可以在设置里允许定位，或者直接告诉我城市名。", true)
+                }
+                let text = await WeatherBox.fetch(lat: loc.coordinate.latitude, lon: loc.coordinate.longitude)
+                return (text, false)
+
+            case "where_am_i":
+                guard let loc = await LocationBox.shared.current() else {
+                    return ("拿不到定位（可能没给权限）", true)
+                }
+                let name = await LocationBox.shared.placeName(loc) ?? "未知"
+                return ("当前位置：\(name)（\(String(format: "%.3f", loc.coordinate.latitude)), \(String(format: "%.3f", loc.coordinate.longitude))）", false)
+
+            case "kb_index":
+                guard let root = ExternalFolder.shared.root else {
+                    return ("用户还没授权文件夹。让他去右上角 ⋯ → 连接文件夹。", true)
+                }
+                KnowledgeBase.shared.index(folder: root)
+                return ("开始重建索引，稍后用 kb_search 查。", false)
+
+            case "kb_search":
+                let q = args["query"] as? String ?? ""
+                let limit = (args["limit"] as? Int) ?? 5
+                let hits = KnowledgeBase.shared.search(q, limit: limit)
+                if hits.isEmpty {
+                    if KnowledgeBase.shared.chunks.isEmpty {
+                        return ("知识库是空的。先让用户授权文件夹，再调 kb_index。", true)
+                    }
+                    return ("没检索到相关内容。", false)
+                }
+                var out = ""
+                for (i, h) in hits.enumerated() {
+                    out += "[\(i + 1)] \(h.path)\n\(h.text.prefix(600))\n\n"
+                }
+                return (out, false)
 
             default:
                 return ("没有这个工具：\(name)", true)

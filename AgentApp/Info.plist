@@ -40,6 +40,8 @@
 	</array>
 	<key>NSRemindersUsageDescription</key>
 	<string>让 agent 帮你创建提醒事项。</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>用来回答「我在哪」「要不要带伞」这类问题，位置只在本机使用。</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>让 agent 读取或新建日程。</string>
 	<key>NSContactsUsageDescription</key>

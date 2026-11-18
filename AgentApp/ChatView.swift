@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import PhotosUI
 
 struct ChatView: View {
     @EnvironmentObject private var rt: AgentRuntime
@@ -11,6 +12,10 @@ struct ChatView: View {
     @State private var showCall = false
     @State private var showMemory = false
     @State private var showPersona = false
+    @State private var showPhotoPicker = false
+    @State private var pickedPhoto: PhotosPickerItem?
+    @State private var showShare = false
+    @State private var shareItems: [Any] = []
     @ObservedObject private var folder = ExternalFolder.shared
     @FocusState private var focused: Bool
 
@@ -73,6 +78,12 @@ struct ChatView: View {
                         Button {
                             showPersona = true
                         } label: { Label("人格", systemImage: "person.text.rectangle") }
+                        Button {
+                            showPhotoPicker = true
+                        } label: { Label("从相册读文字", systemImage: "text.viewfinder") }
+                        Button {
+                            exportSession()
+                        } label: { Label("导出这段对话", systemImage: "square.and.arrow.up") }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -99,6 +110,23 @@ struct ChatView: View {
             }
             .sheet(isPresented: $showPersona) {
                 PersonaView()
+            }
+            .photosPicker(isPresented: $showPhotoPicker, selection: $pickedPhoto, matching: .images)
+            .onChange(of: pickedPhoto) { item in
+                guard let item else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let img = UIImage(data: data) {
+                        let text = await OCRBox.recognize(img)
+                        if !text.isEmpty {
+                            draft += (draft.isEmpty ? "" : "\n") + text
+                        }
+                    }
+                    pickedPhoto = nil
+                }
+            }
+            .sheet(isPresented: $showShare) {
+                ShareSheet(items: shareItems)
             }
         }
     }
@@ -221,6 +249,13 @@ struct ChatView: View {
         focused = false
         rt.start(text)
     }
+
+    private func exportSession() {
+        let md = Exporter.markdown(for: rt.current, agentName: rt.settings.agentName)
+        guard let url = Exporter.writeTempFile(md, name: rt.current.title) else { return }
+        shareItems = [url]
+        showShare = true
+    }
 }
 
 // MARK: - 单条消息
@@ -324,4 +359,14 @@ struct MarkdownText: View {
             }
         }
     }
+}
+
+// MARK: - 系统分享面板
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }
