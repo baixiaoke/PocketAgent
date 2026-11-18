@@ -95,8 +95,12 @@ struct AgentSettings: Codable, Equatable {
     var ttsVoice: String = "alloy"
     var ttsAPIKey: String = ""              // 留空 = 复用对话模型的 key
 
-    var systemPrompt: String = """
-    你可以直接操作这台设备：读写 App 沙盒文件、读取用户授权的外部文件夹、抓网页、剪贴板、打开链接、发通知、建提醒、读日历。
+    /// 旧版用户可编辑的系统提示词：只用于迁移，不再参与拼装
+    var systemPrompt: String = ""
+
+    /// 内置的工具说明（用户不可改，人格一律走人格规则）
+    static let toolBrief = """
+    你可以直接操作这台设备：读写 App 沙盒文件、读取用户授权的外部文件夹、抓网页、剪贴板、打开链接、发通知、建提醒、读日历、生成图片。
 
     工具使用：
     1. 需要事实或最新信息时用 http_get / web_read，不要凭记忆编。
@@ -105,7 +109,7 @@ struct AgentSettings: Codable, Equatable {
     4. 了解到关于用户的长期事实时，主动用 remember 记下来。
     5. 一次只调一个工具，拿到结果再决定下一步。
 
-    语言用简体中文。说话风格以上面的人格设定为准。
+    语言用简体中文。说话风格完全以上面的人格设定为准。
     """
 
     // 旧版本存下来的 JSON 缺字段时，不让整个设置失效
@@ -156,7 +160,7 @@ struct AgentSettings: Codable, Equatable {
             out += "\n专注把事办完，不必寒暄。"
         }
 
-        out += "\n\n【工具与能力】\n" + systemPrompt
+        out += "\n\n【工具与能力】\n" + AgentSettings.toolBrief
         out += LongTermMemory.shared.promptFragment
 
         if unfilteredMode {

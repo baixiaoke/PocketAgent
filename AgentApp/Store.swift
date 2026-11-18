@@ -71,6 +71,14 @@ final class Store {
             settings.agentName = "青露"
             saveSettings(settings)
         }
+
+        // 系统提示词废弃：把用户写过的内容转成一条「自定义」人格规则，避免丢失
+        let legacy = settings.systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !legacy.isEmpty {
+            PersonaStore.shared.add(legacy, category: .custom)
+            settings.systemPrompt = ""
+            saveSettings(settings)
+        }
     }
 
     func saveSessions(_ list: [ChatSession]) {

@@ -16,7 +16,6 @@ struct SettingsView: View {
     @State private var tone = Store.shared.settings.tone
     @State private var companionMode = Store.shared.settings.companionMode
     @State private var unfilteredMode = Store.shared.settings.unfilteredMode
-    @State private var systemPrompt = Store.shared.settings.systemPrompt
 
     // 主动 / 自动化
     @State private var autoExtractMemory = Store.shared.settings.autoExtractMemory
@@ -139,12 +138,6 @@ struct SettingsView: View {
                     Text("人设 / 陪伴")
                 } footer: {
                     Text("开着陪伴模式会多留意你的情绪、主动问候；关掉就只办事不寒暄。")
-                }
-
-                Section("系统提示词") {
-                    TextEditor(text: $systemPrompt)
-                        .font(.callout)
-                        .frame(minHeight: 140)
                 }
 
                 Section {
@@ -281,7 +274,6 @@ struct SettingsView: View {
 
     private func save() {
         var s = Store.shared.settings
-        s.systemPrompt = systemPrompt
         s.temperature = temperature
         s.maxRounds = maxRounds
         s.requireApproval = requireApproval
