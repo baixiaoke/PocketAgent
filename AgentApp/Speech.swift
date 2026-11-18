@@ -243,12 +243,22 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     static func fetchSpeech(_ text: String,
                             settings: AgentSettings,
                             fallbackKey: String) async -> Data? {
+        let key = settings.ttsAPIKey.isEmpty ? fallbackKey : settings.ttsAPIKey
+
+        // 小米 MiMo：走 chat/completions，音频在 message.audio.data
+        if MiMoVoice.looksLikeMiMo(model: settings.ttsModel, base: settings.ttsBaseURL) {
+            return await MiMoVoice.synth(text: text,
+                                         instruction: settings.ttsVoice,
+                                         base: settings.ttsBaseURL,
+                                         apiKey: key,
+                                         model: settings.ttsModel)
+        }
+
         var base = settings.ttsBaseURL.trimmingCharacters(in: .whitespaces)
         while base.hasSuffix("/") { base.removeLast() }
         if !base.hasSuffix("/audio/speech") { base += "/audio/speech" }
         guard let url = URL(string: base) else { return nil }
 
-        let key = settings.ttsAPIKey.isEmpty ? fallbackKey : settings.ttsAPIKey
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.timeoutInterval = 60

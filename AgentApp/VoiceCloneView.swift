@@ -60,7 +60,7 @@ final class VoiceRecorder: NSObject, ObservableObject {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("voice", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let file = dir.appendingPathComponent("seg-\(Int(Date().timeIntervalSince1970)).m4a")
+        let file = dir.appendingPathComponent("seg-\(Int(Date().timeIntervalSince1970)).wav")
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -69,10 +69,12 @@ final class VoiceRecorder: NSObject, ObservableObject {
             try session.setActive(true)
 
             let settings: [String: Any] = [
-                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-                AVSampleRateKey: 44100,
-                AVNumberOfChannelsKey: 1,
-                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+                AVFormatIDKey: Int(kAudioFormatLinearPCM),
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsFloatKey: false,
+                AVLinearPCMIsBigEndianKey: false,
+                AVSampleRateKey: 24000,
+                AVNumberOfChannelsKey: 1
             ]
             let r = try AVAudioRecorder(url: file, settings: settings)
             r.isMeteringEnabled = true
@@ -359,6 +361,44 @@ struct VoiceCloneView: View {
     private func submit() async {
         submitting = true
         defer { submitting = false }
+
+        // 小米 MiMo：不需要上传，参考音频留在本地，用克隆模型时随请求发出去
+        let isMiMo = MiMoVoice.looksLikeMiMo(model: Store.shared.settings.ttsModel,
+                                             base: Store.shared.settings.ttsBaseURL)
+        if isMiMo {
+            let datas = clips.compactMap { try? Data(contentsOf: $0) }
+            guard let ref = MiMoVoice.concatWAV(datas) else {
+                finalMessage = "❌ 音频拼接失败"
+                return
+            }
+            do {
+                try MiMoVoice.saveReference(ref)
+            } catch {
+                finalMessage = "❌ 参考音频写不进沙盒"
+                return
+            }
+
+            let model = "mimo-v2.5-tts-voiceclone"
+            let probe = await MiMoVoice.synth(text: "你好，我是青露。",
+                                             instruction: voiceName,
+                                             base: base,
+                                             apiKey: apiKey,
+                                             model: model)
+            if probe != nil {
+                var s = Store.shared.settings
+                s.ttsBaseURL = base
+                s.ttsModel = model
+                s.ttsVoice = voiceName.isEmpty ? "克隆音色" : voiceName
+                Store.shared.saveSettings(s)
+                finalMessage = "✅ 参考音频已保存（\(ref.count / 1024) KB），克隆可用"
+                onCloned("reference")
+                try? await Task.sleep(nanoseconds: 900_000_000)
+                dismiss()
+            } else {
+                finalMessage = "⚠️ 参考音频已存下（\(ref.count / 1024) KB），但试合成没成功——确认地址是 /v1、模型名是 mimo-v2.5-tts-voiceclone"
+            }
+            return
+        }
 
         guard let merged = VoiceMerger.merge(clips) else {
             finalMessage = "❌ 音频合并失败"

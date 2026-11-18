@@ -351,8 +351,8 @@ struct SpeechModelPage: View {
                     }
                 }
 
-                if voice.isEmpty && voices.isEmpty {
-                    TextField("手动填音色名，如 alloy", text: $voice)
+                if voices.isEmpty {
+                    TextField("音色名或描述（MiMo 填描述，如：温柔清亮的年轻女声）", text: $voice)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .font(.callout.monospaced())
@@ -376,6 +376,31 @@ struct SpeechModelPage: View {
                 .disabled(testing)
             } footer: {
                 Text("会用当前模型和音色念一句短话，验证 Key、模型、音色是否都能用。")
+            }
+
+            if MiMoVoice.looksLikeMiMo(model: model, base: base) {
+                Section {
+                    HStack {
+                        Label("参考音频", systemImage: "waveform")
+                        Spacer()
+                        Text(MiMoVoice.hasReference()
+                             ? "\(MiMoVoice.referenceSize() / 1024) KB"
+                             : "还没有")
+                            .font(.caption)
+                            .foregroundStyle(MiMoVoice.hasReference() ? Theme.mint : .secondary)
+                    }
+                    if MiMoVoice.hasReference() {
+                        Button(role: .destructive) {
+                            MiMoVoice.clearReference()
+                        } label: {
+                            Label("清除参考音频", systemImage: "trash")
+                        }
+                    }
+                } header: {
+                    Text("小米 MiMo")
+                } footer: {
+                    Text("模型填 mimo-v2.5-tts-voicedesign = 按「音色」那栏的描述生成声音；填 mimo-v2.5-tts-voiceclone = 用上面这段参考音频克隆。参考音频只在本地，随请求一起发出去。")
+                }
             }
 
             Section {
@@ -471,6 +496,16 @@ struct SpeechModelPage: View {
     private func detectVoices() async {
         busy = true
         voiceStatus = nil
+
+        // 小米 MiMo 没有音色列表接口：音色 = 一段文字描述（voicedesign）或参考音频（voiceclone）
+        if MiMoVoice.looksLikeMiMo(model: model, base: base) {
+            busy = false
+            voices = []
+            usingFallbackVoices = false
+            voiceStatus = "ℹ️ 小米 MiMo 没有音色列表：这栏填音色描述（voicedesign），或随便起个名（voiceclone）"
+            return
+        }
+
         let (list, err) = await ModelCatalog.listVoices(base: base.isEmpty ? Store.shared.settings.baseURL : base,
                                                        apiKey: useKey)
         busy = false
@@ -514,6 +549,39 @@ struct SpeechModelPage: View {
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url) else {
             cloneStatus = "❌ 读不到音频文件"
+            return
+        }
+
+        // 小米 MiMo：不走 multipart 上传，参考音频直接存在本地
+        if MiMoVoice.looksLikeMiMo(model: model, base: base) {
+            guard data.count > 44, String(data: data.prefix(4), encoding: .ascii) == "RIFF" else {
+                cloneStatus = "❌ MiMo 只吃 WAV 参考音频，这段不是 wav（用「跟着念，现场录一段」，它录的就是 wav）"
+                return
+            }
+            do {
+                try MiMoVoice.saveReference(data)
+            } catch {
+                cloneStatus = "❌ 写不进沙盒"
+                return
+            }
+            let ok = await MiMoVoice.synth(text: "你好，我是青露。",
+                                           instruction: cloneName,
+                                           base: base.isEmpty ? Store.shared.settings.ttsBaseURL : base,
+                                           apiKey: useKey,
+                                           model: "mimo-v2.5-tts-voiceclone")
+            cloneLog = "参考音频 \(data.count / 1024) KB 已保存"
+            if ok != nil {
+                cloneStatus = "✅ 参考音频可用，克隆生效"
+                var s = Store.shared.settings
+                s.ttsBaseURL = base
+                s.ttsModel = "mimo-v2.5-tts-voiceclone"
+                s.ttsVoice = cloneName.isEmpty ? "克隆音色" : cloneName
+                Store.shared.saveSettings(s)
+                model = s.ttsModel
+                voice = s.ttsVoice
+            } else {
+                cloneStatus = "⚠️ 已保存，但试合成没成功（检查地址 /v1、模型名）"
+            }
             return
         }
 
