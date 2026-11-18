@@ -179,6 +179,8 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var isSpeaking = false
     /// 上一次念的来源：云端 / 本地（给界面显示用）
     @Published var lastSource: String = ""
+    private var lastText: String = ""
+    private var lastAt = Date.distantPast
 
     private let synth = AVSpeechSynthesizer()
     private var player: AVAudioPlayer?
@@ -190,17 +192,55 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         synth.delegate = self
     }
 
+    /// 固定一个中文音色，避免中途被系统换掉
+    private func pinnedVoice() -> AVSpeechSynthesisVoice? {
+        if let id = voiceIdentifier, let v = AVSpeechSynthesisVoice(identifier: id) {
+            return v
+        }
+        let all = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix("zh") }
+        // 优先高质量（enhanced/premium），其次任意中文
+        if let best = all.first(where: { $0.quality == .premium })
+            ?? all.first(where: { $0.quality == .enhanced })
+            ?? all.first {
+            voiceIdentifier = best.identifier      // 记住它，下次仍用同一个
+            return best
+        }
+        return AVSpeechSynthesisVoice(language: "zh-CN")
+    }
+
     func speak(_ text: String) {
         let clean = Self.stripMarkdown(text)
         guard !clean.isEmpty else { return }
         stop()
-        let u = AVSpeechUtterance(string: String(clean.prefix(1200)))
-        u.voice = AVSpeechSynthesisVoice(identifier: voiceIdentifier ?? "")
-            ?? AVSpeechSynthesisVoice(language: "zh-CN")
-        u.rate = rate
-        u.pitchMultiplier = 1.0
-        synth.speak(u)
+        let voice = pinnedVoice()
+
+        // 长文本按句切成 ≤700 字的小段，排队念完；同一个音色不变
+        for chunk in Self.chunk(clean, limit: 700) {
+            let u = AVSpeechUtterance(string: chunk)
+            u.voice = voice
+            u.rate = rate
+            u.pitchMultiplier = 1.0
+            synth.speak(u)
+        }
         isSpeaking = true
+    }
+
+    /// 按句末标点切段，尽量不切断句子
+    static func chunk(_ text: String, limit: Int) -> [String] {
+        if text.count <= limit { return [text] }
+        var out: [String] = []
+        var current = ""
+        for ch in text {
+            current.append(ch)
+            let isEnd = ("。！？!?…\n" as String).contains(ch)
+            if isEnd && current.count >= limit / 2 {
+                out.append(current); current = ""
+            } else if current.count >= limit {
+                out.append(current); current = ""
+            }
+        }
+        if !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { out.append(current) }
+        return out.isEmpty ? [text] : out
     }
 
     func stop() {
@@ -232,7 +272,40 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         let clean = Self.stripMarkdown(text)
         guard !clean.isEmpty else { return }
 
+        // 同一条内容 3 秒内不重复念（通话页和聊天页可能同时触发）
+        if clean == lastText, Date().timeIntervalSince(lastAt) < 3 {
+            return
+        }
+        lastText = clean
+        lastAt = Date()
+
         if !settings.ttsBaseURL.isEmpty, !settings.ttsModel.isEmpty {
+            // 长文本一次合成容易超时或被截断，这里切成 ≤280 字再合成
+            let pieces = Self.chunk(clean, limit: 280)
+            if pieces.count > 1 {
+                isSpeaking = true
+                activateForPlayback()
+                for piece in pieces {
+                    if let data = await Self.fetchSpeech(piece, settings: settings, fallbackKey: fallbackKey),
+                       let p = try? AVAudioPlayer(data: data) {
+                        player = p
+                        p.play()
+                        let who = settings.ttsVoice.isEmpty ? settings.ttsModel : settings.ttsVoice
+                        lastSource = "云端 · " + who
+                        // 等这一段念完
+                        var waited = 0.0
+                        while p.isPlaying && waited < 90 {
+                            try? await Task.sleep(nanoseconds: 200_000_000)
+                            waited += 0.2
+                        }
+                    } else {
+                        lastSource = "中间一段没合成成功，已跳过"
+                    }
+                }
+                isSpeaking = false
+                return
+            }
+
             if let data = await Self.fetchSpeech(clean, settings: settings, fallbackKey: fallbackKey) {
                 stop()
                 activateForPlayback()
