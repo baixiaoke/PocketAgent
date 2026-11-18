@@ -31,6 +31,7 @@ struct SettingsView: View {
     @State private var ttsModel = Store.shared.settings.ttsModel
     @State private var ttsVoice = Store.shared.settings.ttsVoice
     @State private var ttsAPIKey = Store.shared.settings.ttsAPIKey
+    @AppStorage("pa.requireBiometric") private var requireBiometric = false
 
     @State private var testing = false
     @State private var testResult: String?
@@ -113,6 +114,7 @@ struct SettingsView: View {
                         Text(String(format: "%.1f", temperature)).font(.caption.monospaced())
                     }
                     Stepper("工具轮数上限：\(maxRounds)", value: $maxRounds, in: 1...20)
+                    Toggle("打开时用 Face ID 解锁", isOn: $requireBiometric)
                     Toggle("危险操作先问我", isOn: $requireApproval)
                     Toggle("回答自动念出来", isOn: $autoSpeak)
                     HStack {
@@ -133,6 +135,23 @@ struct SettingsView: View {
                         ForEach(["温柔", "俏皮", "直接", "自然"], id: \.self) { Text($0) }
                     }
                     Toggle("情感陪伴模式", isOn: $companionMode)
+                    Menu {
+                        ForEach(PersonaPresets.all) { p in
+                            Button {
+                                PersonaStore.shared.apply(p)
+                            } label: {
+                                Label("\(p.title) · \(p.subtitle)", systemImage: p.icon)
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Label("套用现成人格", systemImage: "wand.and.stars")
+                            Spacer()
+                            Text("\(PersonaPresets.all.count) 套")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Toggle("无保留模式（破甲）", isOn: $unfilteredMode)
                         .onChange(of: unfilteredMode) { on in
                             if on { PersonaStore.shared.ensureUnfilteredSeeds() }

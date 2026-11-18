@@ -209,6 +209,31 @@ final class AgentRuntime: ObservableObject {
         current = session
     }
 
+    /// 从某条助手消息重新生成：删掉它和它之后的，再用同一条用户消息重跑
+    func regenerate(from messageID: String) {
+        stop()
+        guard let idx = current.messages.firstIndex(where: { $0.id == messageID }),
+              current.messages[idx].role == .assistant else { return }
+
+        // 往回找最近的一条用户消息
+        var userText: String?
+        var i = idx - 1
+        while i >= 0 {
+            if current.messages[i].role == .user {
+                userText = current.messages[i].content
+                break
+            }
+            i -= 1
+        }
+        guard let text = userText else { return }
+
+        // 截断到那条用户消息（含）
+        current.messages = Array(current.messages.prefix(i + 1))
+        current.messages.removeLast()      // 去掉用户消息，run 会重新 append
+        persist()
+        start(text)
+    }
+
     func delete(_ session: ChatSession) {
         sessions.removeAll { $0.id == session.id }
         if current.id == session.id {

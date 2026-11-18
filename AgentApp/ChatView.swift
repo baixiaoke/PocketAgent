@@ -16,6 +16,7 @@ struct ChatView: View {
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var showShare = false
     @State private var shareItems: [Any] = []
+    @State private var showSearch = false
     @ObservedObject private var folder = ExternalFolder.shared
     @FocusState private var focused: Bool
 
@@ -88,6 +89,9 @@ struct ChatView: View {
                             showPhotoPicker = true
                         } label: { Label("从相册读文字", systemImage: "text.viewfinder") }
                         Button {
+                            showSearch = true
+                        } label: { Label("搜索聊天记录", systemImage: "magnifyingglass") }
+                        Button {
                             exportSession()
                         } label: { Label("导出这段对话", systemImage: "square.and.arrow.up") }
                     } label: {
@@ -134,6 +138,9 @@ struct ChatView: View {
             .sheet(isPresented: $showShare) {
                 ShareSheet(items: shareItems)
             }
+            .sheet(isPresented: $showSearch) {
+                SearchSheet().environmentObject(rt)
+            }
         }
     }
 
@@ -145,6 +152,24 @@ struct ChatView: View {
                     ForEach(rt.current.messages.filter { $0.role != .system }) { msg in
                         MessageRow(message: msg)
                             .id(msg.id)
+                            .contextMenu {
+                                Button {
+                                    UIPasteboard.general.string = msg.content
+                                } label: { Label("复制", systemImage: "doc.on.doc") }
+
+                                if msg.role == .assistant {
+                                    Button {
+                                        rt.regenerate(from: msg.id)
+                                    } label: { Label("重新生成", systemImage: "arrow.clockwise") }
+                                }
+
+                                if let p = msg.imagePath,
+                                   let ui = UIImage(contentsOfFile: ImageGen.absolutePath(p).path) {
+                                    Button {
+                                        UIImageWriteToSavedPhotosAlbum(ui, nil, nil, nil)
+                                    } label: { Label("存进相册", systemImage: "square.and.arrow.down") }
+                                }
+                            }
                     }
                     Color.clear.frame(height: 1).id("bottom")
                 }

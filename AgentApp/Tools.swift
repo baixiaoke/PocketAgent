@@ -106,6 +106,10 @@ final class ToolRegistry {
             ToolSpec(name: "generate_image",
                      description: "根据描述生成一张图片（需先配好图片模型）。会保存到 App 并存入相册。",
                      parameters: obj(["prompt": str("画面描述，越具体越好")], required: ["prompt"])),
+
+            ToolSpec(name: "calendar_today",
+                     description: "读今天的日历日程（需日历权限）。用户问「今天有什么安排」时用它。",
+                     parameters: obj(["days": num("往后看几天，默认 0 = 只看今天")], required: [])),
         ]
     }
 
@@ -318,6 +322,10 @@ final class ToolRegistry {
                 }
                 return (out, false)
 
+            case "calendar_today":
+                let days = (args["days"] as? Int) ?? 0
+                return await CalendarBox.upcoming(days: days)
+
             case "generate_image":
                 let prompt = args["prompt"] as? String ?? ""
                 guard !prompt.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -411,5 +419,38 @@ enum RemindersBox {
         reminder.calendar = calendar
         try store.save(reminder, commit: true)
         return ("已加入提醒事项：\(title)", false)
+    }
+}
+
+// MARK: - 日历
+enum CalendarBox {
+    static func upcoming(days: Int) async -> (String, Bool) {
+        let store = EKEventStore()
+        let granted: Bool
+        if #available(iOS 17.0, *) {
+            granted = (try? await store.requestFullAccessToEvents()) ?? false
+        } else {
+            granted = await withCheckedContinuation { (c: CheckedContinuation<Bool, Never>) in
+                store.requestAccess(to: .event) { ok, _ in c.resume(returning: ok) }
+            }
+        }
+        guard granted else { return ("用户没给日历权限（设置 → PocketAgent → 日历）", true) }
+
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: Date())
+        let end = cal.date(byAdding: .day, value: max(1, days + 1), to: start) ?? start
+        let pred = store.predicateForEvents(withStart: start, end: end, calendars: nil)
+        let events = store.events(matching: pred).sorted { $0.startDate < $1.startDate }
+        if events.isEmpty { return ("这段时间没有日程。", false) }
+
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "M月d日 EEE HH:mm"
+        let lines = events.prefix(30).map { e -> String in
+            let end = DateFormatter.localizedString(from: e.endDate, dateStyle: .none, timeStyle: .short)
+            let loc = (e.location?.isEmpty == false) ? " @ \(e.location!)" : ""
+            return "- \(f.string(from: e.startDate))–\(end)  \(e.title ?? "无标题")\(loc)"
+        }
+        return ("日程：\n" + lines.joined(separator: "\n"), false)
     }
 }

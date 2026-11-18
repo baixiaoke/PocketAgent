@@ -135,6 +135,12 @@ final class PersonaStore: ObservableObject {
         save()
     }
 
+    /// 整体替换（人格预设用）
+    func replaceAll(_ next: [PersonaRule]) {
+        rules = next
+        save()
+    }
+
     /// 打开「无保留」时补上这组规则（已存在就跳过）
     func ensureUnfilteredSeeds() {
         let existing = Set(rules.map { $0.text })
