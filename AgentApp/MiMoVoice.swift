@@ -3,6 +3,9 @@ import Foundation
 /// 小米 MiMo 的语音：走 /chat/completions，音频在 message.audio.data（base64 WAV）
 enum MiMoVoice {
 
+    /// 最近一次失败原因（给界面显示）
+    static var lastError: String = ""
+
     /// 官方内置音色（仅 mimo-v2.5-tts 模型支持）
     static let builtinVoiceIDs = [
         "mimo_default", "冰糖", "茉莉", "苏打", "白桦",
@@ -115,16 +118,42 @@ enum MiMoVoice {
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.timeoutInterval = 45
+        req.timeoutInterval = 60
         req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = payload
 
-        guard let (data, resp) = try? await URLSession.shared.data(for: req),
-              let http = resp as? HTTPURLResponse,
-              (200..<300).contains(http.statusCode) else { return nil }
-
-        return parseAudio(data)
+        // 小米会限流（429）和偶发 5xx：重试三次，指数退避
+        for attempt in 1...3 {
+            lastError = ""
+            do {
+                let (data, resp) = try await URLSession.shared.data(for: req)
+                guard let http = resp as? HTTPURLResponse else {
+                    lastError = "无 HTTP 响应"
+                    continue
+                }
+                if (200..<300).contains(http.statusCode) {
+                    if let audio = parseAudio(data), !audio.isEmpty {
+                        return audio
+                    }
+                    lastError = "HTTP 200 但没解析到音频"
+                    return nil
+                }
+                lastError = "HTTP \(http.statusCode)"
+                if let bodyText = String(data: data, encoding: .utf8), !bodyText.isEmpty {
+                    lastError += "：" + String(bodyText.prefix(80))
+                }
+                // 429 / 5xx 才值得重试
+                let retryable = http.statusCode == 429 || (500...599).contains(http.statusCode)
+                if !retryable { return nil }
+                let wait = pow(2.0, Double(attempt))     // 2s, 4s, 8s
+                try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+            } catch {
+                lastError = "网络异常：" + error.localizedDescription
+                try? await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(attempt)) * 1_000_000_000))
+            }
+        }
+        return nil
     }
 
     /// 带硬超时的合成：超时就返回 nil，不让界面一直转圈

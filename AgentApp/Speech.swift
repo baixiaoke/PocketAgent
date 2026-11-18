@@ -281,7 +281,7 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
         if !settings.ttsBaseURL.isEmpty, !settings.ttsModel.isEmpty {
             // 长文本一次合成容易超时或被截断，这里切成 ≤280 字再合成
-            let pieces = Self.chunk(clean, limit: 280)
+            let pieces = Self.chunk(clean, limit: 150)
             if pieces.count > 1 {
                 isSpeaking = true
                 activateForPlayback()
@@ -298,8 +298,10 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
                             try? await Task.sleep(nanoseconds: 200_000_000)
                             waited += 0.2
                         }
+                        try? await Task.sleep(nanoseconds: 250_000_000)   // 段间小睡，避开限流
                     } else {
-                        lastSource = "中间一段没合成成功，已跳过"
+                        let why = MiMoVoice.lastError.isEmpty ? "没返回音频" : MiMoVoice.lastError
+                        lastSource = "云端失败（" + why + "），剩下的跳过"
                     }
                 }
                 isSpeaking = false
@@ -328,7 +330,8 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
                     lastSource = "云端音频播放失败：" + error.localizedDescription
                 }
             } else if !settings.ttsBaseURL.isEmpty, !settings.ttsModel.isEmpty {
-                lastSource = "云端没返回音频，已退回本地"
+                let why = MiMoVoice.lastError.isEmpty ? "没返回音频" : MiMoVoice.lastError
+                lastSource = "云端失败（" + why + "），已用本地音"
             }
         }
         lastSource = "本地系统语音"
