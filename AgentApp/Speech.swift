@@ -281,7 +281,8 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
         if !settings.ttsBaseURL.isEmpty, !settings.ttsModel.isEmpty {
             // 长文本一次合成容易超时或被截断，这里切成 ≤280 字再合成
-            let pieces = Self.chunk(clean, limit: 150)
+            let limit = max(100, min(900, settings.ttsChunkLimit))
+            let pieces = Self.chunk(clean, limit: limit)
             if pieces.count > 1 {
                 isSpeaking = true
                 activateForPlayback()

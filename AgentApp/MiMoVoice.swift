@@ -116,6 +116,13 @@ enum MiMoVoice {
 
         guard let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
 
+        // ① 缓存命中直接返回，一次请求都不发
+        let cacheVoice = isDesign ? style : voice
+        if let hit = MiMoGuard.cached(text, voice: cacheVoice, style: style, model: model) {
+            lastError = ""
+            return hit
+        }
+
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.timeoutInterval = 60
@@ -125,6 +132,7 @@ enum MiMoVoice {
 
         // 小米会限流（429）和偶发 5xx：重试三次，指数退避
         for attempt in 1...3 {
+            await MiMoGuard.waitTurn()      // ② 本地限速，两次请求至少隔 1 秒
             lastError = ""
             do {
                 let (data, resp) = try await URLSession.shared.data(for: req)
@@ -134,6 +142,7 @@ enum MiMoVoice {
                 }
                 if (200..<300).contains(http.statusCode) {
                     if let audio = parseAudio(data), !audio.isEmpty {
+                        MiMoGuard.store(audio, text: text, voice: cacheVoice, style: style, model: model)  // ④ 存缓存
                         return audio
                     }
                     lastError = "HTTP 200 但没解析到音频"
@@ -146,7 +155,11 @@ enum MiMoVoice {
                 // 429 / 5xx 才值得重试
                 let retryable = http.statusCode == 429 || (500...599).contains(http.statusCode)
                 if !retryable { return nil }
-                let wait = pow(2.0, Double(attempt))     // 2s, 4s, 8s
+                var wait = pow(2.0, Double(attempt))     // 2s, 4s, 8s
+                if let hinted = MiMoGuard.retryAfter(http), hinted > 0 {
+                    wait = min(hinted, 10)               // ③ 服务端说等多久就等多久（最多 10 秒）
+                }
+                if wait > 6 { return nil }               // 太久就不等了，交给上层切本地
                 try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
             } catch {
                 lastError = "网络异常：" + error.localizedDescription

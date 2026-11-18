@@ -97,6 +97,7 @@ struct AgentSettings: Codable, Equatable {
     var ttsAPIKey: String = ""              // 留空 = 复用对话模型的 key
     var moodAffectsVoice: Bool = false      // 情绪是否影响朗读语气（默认关，避免音色漂移）
     var ttsStyle: String = ""               // 额外的风格指令（内置音色/克隆模型用）
+    var ttsChunkLimit: Int = 400            // 云端分段长度：越大请求越少，首字越慢
 
     /// 旧版用户可编辑的系统提示词：只用于迁移，不再参与拼装
     var systemPrompt: String = ""
@@ -152,6 +153,7 @@ struct AgentSettings: Codable, Equatable {
         ttsAPIKey = (try? c.decodeIfPresent(String.self, forKey: .ttsAPIKey)) ?? ttsAPIKey
         moodAffectsVoice = (try? c.decodeIfPresent(Bool.self, forKey: .moodAffectsVoice)) ?? moodAffectsVoice
         ttsStyle = (try? c.decodeIfPresent(String.self, forKey: .ttsStyle)) ?? ttsStyle
+        ttsChunkLimit = (try? c.decodeIfPresent(Int.self, forKey: .ttsChunkLimit)) ?? ttsChunkLimit
         systemPrompt = (try? c.decodeIfPresent(String.self, forKey: .systemPrompt)) ?? systemPrompt
     }
 
