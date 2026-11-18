@@ -42,6 +42,8 @@ struct SettingsView: View {
     @State private var showShare = false
     @State private var shareItems: [Any] = []
     @State private var restoreMessage: String?
+    @State private var careInfo: String?
+    @State private var careTesting = false
     @State private var showBgPicker = false
     @State private var pickingPage: ThemeManager.Page = .chat
     @State private var pickedBg: PhotosPickerItem?
@@ -146,6 +148,35 @@ struct SettingsView: View {
                     if careEnabled {
                         DatePicker("早上", selection: $morningTime, displayedComponents: .hourAndMinute)
                         DatePicker("晚上", selection: $eveningTime, displayedComponents: .hourAndMinute)
+
+                        Button {
+                            Task {
+                                careTesting = true
+                                let name = Store.shared.settings.agentName
+                                let ok = await CareScheduler.fireTest(name: name)
+                                careTesting = false
+                                careInfo = ok ? "已排一条 5 秒后的测试通知，等它弹出来" : "通知权限没给，去系统设置里打开"
+                            }
+                        } label: {
+                            HStack {
+                                Label("发一条测试通知", systemImage: "bell.badge")
+                                Spacer()
+                                if careTesting { ProgressView() }
+                            }
+                        }
+
+                        Button {
+                            Task { await refreshCareInfo() }
+                        } label: {
+                            Label("检查排程状态", systemImage: "checklist")
+                        }
+
+                        if let info = careInfo {
+                            Text(info)
+                                .font(.caption2.monospaced())
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                        }
                     }
                     Toggle("长问题自动换推理模型", isOn: $autoModelSwitch)
                     if autoModelSwitch {
@@ -292,6 +323,12 @@ struct SettingsView: View {
         }
     }
 
+    private func refreshCareInfo() async {
+        let status = await CareScheduler.authStatus()
+        let pending = await CareScheduler.pendingSummary()
+        careInfo = "权限：" + CareScheduler.statusText(status) + "\n" + pending
+    }
+
     private func save() {
         var s = Store.shared.settings
         s.temperature = temperature
@@ -326,6 +363,8 @@ struct SettingsView: View {
         } else {
             CareScheduler.cancelAll()
         }
+
+        Task { await refreshCareInfo() }
     }
 }
 

@@ -20,6 +20,14 @@ struct PocketAgentApp: App {
         (FontScale(rawValue: fontRaw) ?? .normal).dynamicType
     }
 
+    init() {
+        NotificationBridge.shared.install()
+        let s = Store.shared.settings
+        if s.careEnabled {
+            Task { await CareScheduler.ensureScheduled(settings: s) }
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             LockGate {
