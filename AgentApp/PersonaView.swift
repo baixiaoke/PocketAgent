@@ -53,6 +53,7 @@ struct PersonaView: View {
                     }
                 }
             }
+            .themedScroll(.persona)
             .navigationTitle("人格")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

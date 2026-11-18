@@ -67,6 +67,7 @@ struct CallView: View {
     @StateObject private var speech = SpeechEngine()
     @StateObject private var voice = VoiceOut()
     @StateObject private var camera = CameraController()
+    @ObservedObject private var themeMgr = ThemeManager.shared
 
     @State private var videoMode = true
     @State private var thinking = false
@@ -100,15 +101,12 @@ struct CallView: View {
     // MARK: 背景
     private var background: some View {
         ZStack {
+            PageBackground(page: .call)
+
             if videoMode {
                 CameraPreview(session: camera.session)
                     .ignoresSafeArea()
                 LinearGradient(colors: [.black.opacity(0.65), .black.opacity(0.15), .black.opacity(0.8)],
-                               startPoint: .top, endPoint: .bottom)
-                    .ignoresSafeArea()
-            } else {
-                LinearGradient(colors: [Color(red: 0.06, green: 0.07, blue: 0.12),
-                                        Color(red: 0.02, green: 0.02, blue: 0.05)],
                                startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
             }

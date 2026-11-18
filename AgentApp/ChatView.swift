@@ -21,12 +21,13 @@ struct ChatView: View {
     @StateObject private var dictation = SpeechEngine()
     @State private var dictating = false
     @ObservedObject private var folder = ExternalFolder.shared
+    @ObservedObject private var themeMgr = ThemeManager.shared
     @FocusState private var focused: Bool
 
     var body: some View {
         NavigationStack {
             ZStack {
-                TechBackground()
+                PageBackground(page: .chat)
                 VStack(spacing: 0) {
                     transcript
                     if let status = rt.statusLine.isEmpty ? nil : rt.statusLine {

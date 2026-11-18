@@ -35,6 +35,7 @@ struct ModelsView: View {
                     sub: store.settings.ttsBaseURL)
             }
         }
+        .themedScroll(.settings)
         .navigationTitle("模型")
         .id(refresh)
         .onAppear { refresh += 1 }

@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import PhotosUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -33,6 +34,10 @@ struct SettingsView: View {
     @State private var showShare = false
     @State private var shareItems: [Any] = []
     @State private var restoreMessage: String?
+    @State private var showBgPicker = false
+    @State private var pickingPage: ThemeManager.Page = .chat
+    @State private var pickedBg: PhotosPickerItem?
+    @ObservedObject private var themeMgr = ThemeManager.shared
 
     var body: some View {
         NavigationStack {
@@ -154,7 +159,15 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Picker("主题", selection: $themeRaw) {
+                    Picker("配色", selection: Binding(
+                        get: { ThemeManager.shared.paletteID },
+                        set: { ThemeManager.shared.select($0) }
+                    )) {
+                        ForEach(Palettes.all) { p in
+                            Text(p.name).tag(p.id)
+                        }
+                    }
+                    Picker("深浅", selection: $themeRaw) {
                         Text("深色").tag("dark")
                         Text("浅色").tag("light")
                         Text("跟随系统").tag("auto")
@@ -166,6 +179,35 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("外观")
+                } footer: {
+                    Text("配色一换，所有页面跟着变；深浅只影响系统控件。")
+                }
+
+                Section {
+                    ForEach(ThemeManager.Page.allCases) { page in
+                        HStack {
+                            Text(page.rawValue)
+                            Spacer()
+                            Button(ThemeManager.shared.hasBackground(page) ? "换一张" : "选择图片") {
+                                pickingPage = page
+                                showBgPicker = true
+                            }
+                            .font(.callout)
+                            if ThemeManager.shared.hasBackground(page) {
+                                Button {
+                                    ThemeManager.shared.clearBackground(page)
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("每页背景图")
+                } footer: {
+                    Text("给某个页面选一张图，它会用这张图做底，并自动叠一层深色遮罩保证文字看得清。不选就用当前配色的默认底。")
                 }
 
                 Section {
@@ -194,6 +236,7 @@ struct SettingsView: View {
                     Text("包含会话、记忆、人格、知识库索引。恢复会覆盖现有数据。")
                 }
             }
+            .themedScroll(.settings)
             .navigationTitle("设置")
             .fileImporter(isPresented: $showRestore, allowedContentTypes: [.json]) { result in
                 guard case .success(let url) = result else { return }
@@ -201,6 +244,17 @@ struct SettingsView: View {
                 restoreMessage = n > 0
                     ? "已恢复 \(n) 个文件，重启 App 后生效"
                     : "恢复失败：文件格式不对"
+            }
+            .photosPicker(isPresented: $showBgPicker, selection: $pickedBg, matching: .images)
+            .onChange(of: pickedBg) { item in
+                guard let item else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let img = UIImage(data: data) {
+                        ThemeManager.shared.setBackground(img, for: pickingPage)
+                    }
+                    pickedBg = nil
+                }
             }
             .sheet(isPresented: $showShare) {
                 ShareSheet(items: shareItems)

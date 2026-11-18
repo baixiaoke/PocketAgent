@@ -1,27 +1,29 @@
 import SwiftUI
 
-/// 统一视觉语言：深空底 + 青色霓虹 + 玻璃面板
+/// 统一视觉语言：所有颜色都从当前调色板取，换主题即全局生效
 enum Theme {
-    static let void     = Color(red: 0.03, green: 0.04, blue: 0.07)
-    static let deep     = Color(red: 0.05, green: 0.07, blue: 0.12)
-    static let panel    = Color(red: 0.09, green: 0.12, blue: 0.19)
-    static let line     = Color.white.opacity(0.08)
+    private static var p: Palette { ThemeManager.shared.palette }
 
-    static let cyan     = Color(red: 0.22, green: 0.91, blue: 1.00)
-    static let violet   = Color(red: 0.55, green: 0.36, blue: 1.00)
-    static let mint     = Color(red: 0.30, green: 0.95, blue: 0.78)
-    static let amber    = Color(red: 1.00, green: 0.72, blue: 0.30)
-    static let danger   = Color(red: 1.00, green: 0.38, blue: 0.42)
+    static var void: Color { Color(uiColor: p.voidColor) }
+    static var deep: Color { Color(uiColor: p.deepColor) }
+    static var panel: Color { Color(uiColor: p.panelColor) }
+    static var line: Color { Color.white.opacity(0.08) }
 
-    static let userBubble = LinearGradient(
-        colors: [Color(red: 0.10, green: 0.55, blue: 0.85), Color(red: 0.30, green: 0.30, blue: 0.95)],
-        startPoint: .topLeading, endPoint: .bottomTrailing)
+    static var cyan: Color { Color(uiColor: p.accent) }
+    static var violet: Color { Color(uiColor: p.secondary) }
+    static var mint: Color { Color(uiColor: p.mint) }
+    static var amber: Color { Color(uiColor: p.amber) }
+    static var danger: Color { Color(uiColor: p.danger) }
 
-    static let accentBar = LinearGradient(
-        colors: [cyn(0.9), violet.opacity(0.85)],
-        startPoint: .leading, endPoint: .trailing)
+    static var userBubble: LinearGradient {
+        LinearGradient(colors: [Color(uiColor: p.bubbleTop), Color(uiColor: p.bubbleBottom)],
+                       startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
 
-    private static func cyn(_ a: Double) -> Color { cyan.opacity(a) }
+    static var accentBar: LinearGradient {
+        LinearGradient(colors: [cyan.opacity(0.9), violet.opacity(0.85)],
+                       startPoint: .leading, endPoint: .trailing)
+    }
 }
 
 /// 深空背景：渐变 + 两团辉光 + 细网格
@@ -29,9 +31,7 @@ struct TechBackground: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(red: 0.03, green: 0.04, blue: 0.08),
-                         Color(red: 0.05, green: 0.07, blue: 0.13),
-                         Color(red: 0.02, green: 0.03, blue: 0.05)],
+                colors: [Theme.void, Theme.deep, Theme.void.opacity(0.9)],
                 startPoint: .top, endPoint: .bottom)
 
             Circle()
@@ -50,6 +50,34 @@ struct TechBackground: View {
                 .stroke(Theme.cyan.opacity(0.06), lineWidth: 0.5)
         }
         .ignoresSafeArea()
+    }
+}
+
+/// 页面背景：有自定义图就用图（加暗化层保证文字可读），没有就用科技底
+struct PageBackground: View {
+    let page: ThemeManager.Page
+    @ObservedObject private var tm = ThemeManager.shared
+
+    var body: some View {
+        ZStack {
+            TechBackground()
+
+            if let img = tm.backgroundImage(for: page) {
+                GeometryReader { geo in
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                }
+                .ignoresSafeArea()
+
+                LinearGradient(colors: [.black.opacity(0.55), .black.opacity(0.35), .black.opacity(0.72)],
+                               startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea()
+            }
+        }
+        .id(tm.backgroundRevision)
     }
 }
 
@@ -99,7 +127,6 @@ extension View {
         modifier(GlassCard(radius: radius, tint: tint))
     }
 
-    /// 霓虹辉光
     func neonGlow(_ color: Color, radius: CGFloat = 10, opacity: Double = 0.5) -> some View {
         shadow(color: color.opacity(opacity), radius: radius)
     }
@@ -123,5 +150,14 @@ struct PulseBar: View {
         }
         .frame(height: 1.6)
         .clipped()
+    }
+}
+
+extension View {
+    /// 让 List/Form 也吃主题：透明背景 + 统一底色
+    func themedScroll(_ page: ThemeManager.Page) -> some View {
+        self
+            .scrollContentBackground(.hidden)
+            .background(PageBackground(page: page))
     }
 }

@@ -39,6 +39,7 @@ struct MemorySheet: View {
                     }
                 }
             }
+            .themedScroll(.memory)
             .navigationTitle("长期记忆")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
