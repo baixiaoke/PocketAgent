@@ -19,6 +19,7 @@ struct ChatView: View {
     @State private var showSearch = false
     @State private var showMood = false
     @ObservedObject private var mood = MoodStore.shared
+    @StateObject private var tts = VoiceOut()
     @State private var editing: ChatMessage?
     @StateObject private var dictation = SpeechEngine()
     @State private var dictating = false
@@ -155,6 +156,14 @@ struct ChatView: View {
             }
             .sheet(isPresented: $showMood) {
                 MoodSheet()
+            }
+            .onChange(of: rt.isRunning) { running in
+                // 聊天页也支持「回答自动念出来」，通话页自己会念，别重复
+                guard !running, rt.settings.autoSpeak, !showCall else { return }
+                let reply = rt.lastAssistantText
+                guard !reply.isEmpty else { return }
+                let s = rt.settings
+                Task { await tts.speakSmart(reply, settings: s, fallbackKey: Store.shared.apiKey) }
             }
             .sheet(item: $editing) { msg in
                 EditMessageSheet(message: msg) { newText in

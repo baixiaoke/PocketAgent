@@ -1,528 +1,368 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>青露 · UI 预览</title>
+<title>青露 · 界面</title>
 <style>
-  :root{
-    --bg:#000; --panel:#1c1c1e; --panel2:#2c2c2e; --line:#38383a;
-    --text:#fff; --muted:#8e8e93; --blue:#0a84ff; --purple:#bf5af2;
-    --orange:#ff9f0a; --red:#ff453a; --green:#30d158;
-  }
-  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
-  body{
-    margin:0;padding:28px 20px 60px;background:#0b0b0d;color:#e9e9ee;
-    font:15px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;
-  }
-  h1{font-size:20px;margin:0 0 4px}
-  .sub{color:#8b8b95;font-size:13px;margin-bottom:26px}
-  .row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
-  body{padding:22px 26px 40px}
-  .wrap{width:320px}
-  .label{font-size:12.5px;color:#8b8b95;margin-bottom:8px;text-align:center}
-
-  /* 手机壳 */
-  .phone{
-    width:320px;height:692px;border-radius:44px;background:#000;
-    border:9px solid #26262a;box-shadow:0 24px 60px rgba(0,0,0,.6);
-    overflow:hidden;position:relative;display:flex;flex-direction:column;
-  }
-  .notch{
-    position:absolute;top:9px;left:50%;transform:translateX(-50%);
-    width:96px;height:26px;background:#000;border-radius:14px;z-index:20;
-  }
-  .statusbar{
-    height:46px;display:flex;align-items:flex-end;justify-content:space-between;
-    padding:0 22px 4px;font-size:12px;font-weight:600;color:#fff;flex:0 0 auto;
-  }
-
-  /* 导航栏 */
-  .navbar{
-    height:46px;display:flex;align-items:center;padding:0 12px;gap:14px;
-    border-bottom:.5px solid var(--line);flex:0 0 auto;
-  }
-  .navbar .title{
-    flex:1;text-align:center;font-size:15px;font-weight:600;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .icon{width:22px;height:22px;fill:none;stroke:#e9e9ee;stroke-width:1.8}
-
-  /* 聊天 */
-  .chat{flex:1;overflow:hidden;padding:12px 12px 6px;display:flex;flex-direction:column;gap:10px}
-  .msg{display:flex}
-  .msg.me{justify-content:flex-end}
-  .bubble{
-    max-width:84%;padding:9px 13px;border-radius:17px;font-size:13.5px;line-height:1.45;
-    white-space:pre-wrap;
-  }
-  .me .bubble{background:var(--blue);color:#fff;border-bottom-right-radius:5px}
-  .ai .bubble{background:var(--panel);border-bottom-left-radius:5px}
-  .chip{
-    display:inline-flex;align-items:center;gap:5px;font-size:10.5px;
-    font-family:ui-monospace,Menlo,monospace;color:var(--purple);
-    background:rgba(191,90,242,.16);border-radius:20px;padding:3px 9px;
-  }
-  .toolresult{
-    font-size:10.5px;font-family:ui-monospace,Menlo,monospace;color:var(--muted);
-    background:#151517;border:.5px solid var(--line);border-radius:10px;
-    padding:7px 9px;max-height:52px;overflow:hidden;white-space:pre-wrap;
-  }
-  .approval{
-    margin:0 12px 8px;padding:10px 12px;border-radius:12px;
-    background:rgba(255,159,10,.1);
-  }
-  .approval .t{color:var(--orange);font-size:11.5px;font-weight:600;margin-bottom:8px}
-  .approval .btns{display:flex;gap:8px}
-  .btn{
-    flex:1;text-align:center;padding:7px;border-radius:9px;font-size:12.5px;
-    border:1px solid var(--line);background:var(--panel2);color:#fff;
-  }
-  .btn.primary{background:var(--blue);border-color:var(--blue);font-weight:600}
-
-  /* 输入栏 */
-  .composer{
-    flex:0 0 auto;display:flex;align-items:flex-end;gap:8px;
-    padding:8px 12px 22px;border-top:.5px solid var(--line);background:rgba(20,20,22,.97);
-  }
-  .field{
-    flex:1;background:var(--panel);border-radius:19px;padding:9px 14px;
-    color:var(--muted);font-size:14px;
-  }
-  .send{
-    width:34px;height:34px;border-radius:50%;background:#2f2f34;color:#7a7a80;
-    display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 auto;
-  }
-
-  /* 通话页 */
-  .call{flex:1;position:relative;display:flex;flex-direction:column;
-    background:radial-gradient(120% 80% at 50% 0%,#243044 0%,#0a0c12 55%,#05060a 100%)}
-  .call .cam{
-    position:absolute;inset:0;
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; padding: 0; }
+  body {
     background:
-      radial-gradient(60% 40% at 50% 35%,rgba(120,160,220,.18),transparent 70%),
-      linear-gradient(180deg,#1a2331 0%,#0b0f16 60%,#05060a 100%);
+      radial-gradient(900px 520px at 14% -10%, rgba(56,232,255,.16), transparent 62%),
+      radial-gradient(820px 520px at 86% 112%, rgba(139,92,246,.16), transparent 62%),
+      linear-gradient(180deg, #04060c, #070b14 45%, #04060c);
+    color: #eaf6ff;
+    font-family: -apple-system, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 26px 26px 40px;
+    min-height: 100vh;
   }
-  .call .shade{position:absolute;inset:0;
-    background:linear-gradient(180deg,rgba(0,0,0,.55),transparent 35%,rgba(0,0,0,.75))}
-  .call .content{position:relative;z-index:5;display:flex;flex-direction:column;
-    height:100%;justify-content:space-between;padding:10px 18px 22px}
-  .calltop{display:flex;justify-content:space-between;align-items:center}
-  .round{
-    width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.35);
-    display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);
-  }
-  .callname{font-size:13px;font-weight:600;color:#fff}
-  .callcenter{display:flex;flex-direction:column;align-items:center;gap:14px}
-  .avatar{
-    width:104px;height:104px;border-radius:50%;
-    background:linear-gradient(135deg,#4d96ff,#a78bfa);
-    display:flex;align-items:center;justify-content:center;
-    font-size:42px;font-weight:700;color:#fff;
-    box-shadow:0 0 0 12px rgba(77,150,255,.12);
-  }
-  .state{font-size:12px;color:rgba(255,255,255,.72)}
-  .wave{display:flex;align-items:center;gap:3px;height:26px}
-  .wave i{display:block;width:3px;border-radius:2px;background:rgba(255,255,255,.75)}
-  .subtitle{font-size:13px;color:rgba(255,255,255,.9);text-align:center;min-height:38px}
-  .controls{display:flex;justify-content:center;align-items:center;gap:22px;margin-top:14px}
-  .cbtn{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;
-    justify-content:center;background:rgba(255,255,255,.16)}
-  .cbtn.mic{background:var(--blue)}
-  .cbtn.hang{width:64px;height:64px;background:var(--red)}
-
-  /* 记忆 */
-  .list{flex:1;overflow:hidden;padding:12px 0}
-  .sec-title{font-size:11.5px;color:var(--muted);padding:4px 16px 6px}
-  .cell{
-    background:var(--panel);margin:0 12px 8px;border-radius:12px;padding:11px 13px;
-  }
-  .cell .main{font-size:13.5px}
-  .cell .meta{font-size:10.5px;color:var(--muted);margin-top:3px}
-  .addrow{display:flex;gap:8px;padding:0 12px 10px}
-  .addrow .field{font-size:13px}
-
-  /* 设置 */
-  .form{flex:1;overflow:hidden;padding:10px 0}
-  .group{margin:0 12px 14px;background:var(--panel);border-radius:12px;overflow:hidden}
-  .gtitle{font-size:11px;color:var(--muted);padding:0 16px 5px}
-  .frow{display:flex;justify-content:space-between;align-items:center;
-    padding:10px 14px;border-bottom:.5px solid var(--line);font-size:13.5px}
-  .frow:last-child{border-bottom:none}
-  .val{color:var(--muted);font-size:13px;font-family:ui-monospace,Menlo,monospace}
-  .toggle{width:42px;height:25px;border-radius:13px;background:#3a3a3c;position:relative}
-  .toggle.on{background:var(--green)}
-  .toggle::after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;
-    border-radius:50%;background:#fff;transition:.2s}
-  .toggle.on::after{left:19px}
-  .note{font-size:10.5px;color:var(--muted);padding:0 16px 10px;line-height:1.5}
-
-  /* 人格规则 */
-  .psec{margin:0 12px 12px;background:var(--panel);border-radius:12px;overflow:hidden}
-  .psec.forb{background:#221618}
-  .phead{display:flex;align-items:center;gap:6px;padding:9px 12px 7px;
-    font-size:11.5px;color:var(--muted);border-bottom:.5px solid var(--line)}
-  .phead span:nth-child(2){color:#d8d8dd;font-weight:600}
-  .phead .cnt{font-size:10px;background:#2f2f34;border-radius:8px;padding:1px 6px}
-  .phead .plus{margin-left:auto;font-size:15px;line-height:1}
-  .prow{display:flex;gap:7px;padding:8px 12px;border-bottom:.5px solid rgba(56,56,58,.5);
-    font-size:12.5px;line-height:1.45}
-  .prow:last-child{border-bottom:none}
-  .prow .ck{font-size:11px;flex:0 0 auto;margin-top:1px}
-  .prow .rtext{flex:1}
-  .psec.forb .rtext{color:#ffb3ae}
-  /* ═══ 科技感主题覆盖 ═══ */
-  :root{
-    --bg:#04060c; --panel:rgba(255,255,255,.055); --panel2:rgba(255,255,255,.09);
-    --line:rgba(56,232,255,.16); --text:#eaf6ff; --muted:#7d8ea3;
-    --accent:#38e8ff; --accent2:#8b5cf6; --tool:#38e8ff;
-    --blue:#38e8ff; --purple:#8b5cf6; --red:#ff5f6d; --green:#2ee6a8;
-  }
-  body{
-    background:
-      radial-gradient(900px 500px at 15% -10%, rgba(56,232,255,.16), transparent 60%),
-      radial-gradient(800px 500px at 85% 110%, rgba(139,92,246,.16), transparent 60%),
-      linear-gradient(180deg,#04060c,#070b14 45%,#04060c);
-    color:var(--text);
-  }
-  body::before{
-    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
     background-image:
       linear-gradient(rgba(56,232,255,.05) 1px, transparent 1px),
       linear-gradient(90deg, rgba(56,232,255,.05) 1px, transparent 1px);
-    background-size:26px 26px;
-    mask-image:radial-gradient(circle at 50% 30%, #000 40%, transparent 85%);
+    background-size: 26px 26px;
+    -webkit-mask-image: radial-gradient(circle at 50% 26%, #000 38%, transparent 86%);
   }
-  h1{letter-spacing:.5px}
-  h1::after{content:""; display:block; width:120px; height:2px; margin-top:8px;
-    background:linear-gradient(90deg,#38e8ff,#8b5cf6,transparent); border-radius:2px}
-  .phone{
-    background:linear-gradient(180deg,#070c16,#04070d 70%,#03050a);
-    border-color:#152235;
-    box-shadow:0 0 0 1px rgba(56,232,255,.10), 0 24px 70px rgba(0,0,0,.75), 0 0 60px rgba(56,232,255,.10);
+  .wrap { position: relative; z-index: 1; }
+
+  .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .hd img { width: 42px; height: 42px; border-radius: 12px; box-shadow: 0 0 22px rgba(56,232,255,.4); }
+  h1 { font-size: 21px; margin: 0; letter-spacing: .4px; font-weight: 600; }
+  h1 small { font-weight: 400; opacity: .5; font-size: 13px; margin-left: 8px; letter-spacing: 0; }
+  .sub { color: #7d8ea3; font-size: 12.5px; margin: 6px 0 22px; line-height: 1.6; }
+
+  .grid { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+
+  /* 手机外壳 */
+  .phone {
+    width: 390px; height: 844px; border-radius: 46px; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, #070c16, #04070d 70%, #03050a);
+    border: 1px solid #152235;
+    box-shadow: 0 0 0 1px rgba(56,232,255,.10), 0 26px 70px rgba(0,0,0,.75), 0 0 70px rgba(56,232,255,.10);
+    display: flex; flex-direction: column;
+    flex: 0 0 auto;
   }
-  .statusbar{color:#cfe8f5}
-  .navbar{border-bottom:1px solid rgba(56,232,255,.14);
-    background:linear-gradient(180deg, rgba(56,232,255,.06), transparent)}
-  .navbar .title{color:#eaf6ff}
-  .icon{stroke:#9fe8ff}
-  .me .bubble{
-    background:linear-gradient(135deg,rgba(15,142,207,.95),rgba(79,70,229,.95));
-    box-shadow:0 0 18px rgba(139,92,246,.45), inset 0 0 0 .6px rgba(255,255,255,.22);
+  .phone::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(56,232,255,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,232,255,.045) 1px, transparent 1px);
+    background-size: 26px 26px;
+    -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 40%, transparent 88%);
   }
-  .ai .bubble{
-    background:rgba(255,255,255,.05);
-    border:.6px solid rgba(56,232,255,.22);
-    backdrop-filter:blur(10px);
-    box-shadow:0 0 22px rgba(56,232,255,.10);
+  .cap { text-align: center; font-size: 12.5px; color: #7d8ea3; margin-top: 12px; letter-spacing: .3px; }
+
+  .sb { display: flex; justify-content: space-between; padding: 14px 26px 4px; font-size: 13px; font-weight: 600; color: #cfe8f5; }
+  .notch { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 118px; height: 30px; background: #000; border-radius: 18px; z-index: 5; }
+
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px 12px; border-bottom: 1px solid rgba(56,232,255,.14); background: linear-gradient(180deg, rgba(56,232,255,.06), transparent); }
+  .nav .t { font-size: 16px; font-weight: 600; }
+  .ic { color: #9fe8ff; font-size: 16px; display: flex; gap: 16px; align-items: center; }
+  .ic .emoji { font-size: 17px; }
+
+  .body { flex: 1; overflow: hidden; padding: 14px 14px 0; display: flex; flex-direction: column; gap: 10px; }
+
+  .row { display: flex; }
+  .row.me { justify-content: flex-end; }
+  .bubble { max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 14.5px; line-height: 1.5; }
+  .me .bubble {
+    background: linear-gradient(135deg, rgba(15,142,207,.95), rgba(79,70,229,.95));
+    box-shadow: 0 0 18px rgba(139,92,246,.45), inset 0 0 0 .6px rgba(255,255,255,.22);
+    color: #fff;
   }
-  .chip{color:#38e8ff; background:rgba(56,232,255,.13);
-    border:.6px solid rgba(56,232,255,.25)}
-  .toolresult{background:rgba(139,92,246,.07); border-color:rgba(139,92,246,.28); color:#b9c6d6}
-  .approval{background:rgba(255,183,77,.08); border:.6px solid rgba(255,183,77,.28); border-radius:12px}
-  .approval .t{color:#ffb74d}
-  .btn{background:rgba(255,255,255,.06); border-color:rgba(56,232,255,.22)}
-  .btn.primary{background:linear-gradient(135deg,#0f8ecf,#4f46e5); border-color:transparent;
-    box-shadow:0 0 16px rgba(56,232,255,.35)}
-  .composer{background:rgba(4,7,13,.92); border-top:1px solid rgba(56,232,255,.16)}
-  .field{background:rgba(255,255,255,.05); border:.6px solid rgba(56,232,255,.20); color:#9fb3c6}
-  .send{background:rgba(56,232,255,.14); color:#38e8ff}
-  .cell{background:rgba(255,255,255,.045); border:.6px solid rgba(56,232,255,.12)}
-  .cell .meta{color:#6f8199}
-  .group{background:rgba(255,255,255,.045); border:.6px solid rgba(56,232,255,.10)}
-  .frow{border-bottom-color:rgba(56,232,255,.10)}
-  .val{color:#9fe8ff}
-  .toggle{background:rgba(255,255,255,.14)}
-  .toggle.on{background:linear-gradient(135deg,#2ee6a8,#38e8ff)}
-  .psec{background:rgba(255,255,255,.045); border:.6px solid rgba(56,232,255,.10)}
-  .psec.forb{background:rgba(255,95,109,.07); border-color:rgba(255,95,109,.22)}
-  .phead{border-bottom-color:rgba(56,232,255,.10)}
-  .prow{border-bottom-color:rgba(56,232,255,.06)}
-  .avatar{background:linear-gradient(135deg,#38e8ff,#8b5cf6);
-    box-shadow:0 0 0 12px rgba(56,232,255,.10), 0 0 40px rgba(139,92,246,.45)}
-  .call{background:radial-gradient(120% 80% at 50% 0%,#0d2033 0%,#060a12 55%,#03050a 100%)}
-  .cbtn{background:rgba(255,255,255,.12); backdrop-filter:blur(6px)}
-  .cbtn.mic{background:linear-gradient(135deg,#0f8ecf,#38e8ff); box-shadow:0 0 22px rgba(56,232,255,.5)}
-  .cbtn.hang{background:linear-gradient(135deg,#ff3b52,#ff5f6d); box-shadow:0 0 22px rgba(255,95,109,.45)}
-  .note{color:#6f8199}
-  .label{color:#7d8ea3; letter-spacing:.4px}
-  .sub{color:#7d8ea3}
+  .ai .bubble {
+    background: rgba(255,255,255,.055);
+    border: .6px solid rgba(56,232,255,.22);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 22px rgba(56,232,255,.10);
+    color: #eaf6ff;
+  }
+  .ai .bubble + .bubble { margin-top: 6px; }
+  .ai .multi { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 82%; }
+  .ai .multi .bubble { max-width: 100%; }
+
+  .tool { align-self: flex-start; background: rgba(139,92,246,.07); border: .6px solid rgba(139,92,246,.28); border-radius: 12px; padding: 9px 12px; font-size: 11.5px; color: #b9c6d6; font-family: ui-monospace, monospace; }
+  .tool b { color: #c8b6ff; font-weight: 600; }
+
+  .chip { align-self: center; font-size: 11px; color: #38e8ff; background: rgba(56,232,255,.13); border: .6px solid rgba(56,232,255,.25); padding: 3px 10px; border-radius: 99px; }
+
+  .composer { padding: 10px 12px 22px; background: rgba(4,7,13,.92); border-top: 1px solid rgba(56,232,255,.16); position: relative; }
+  .composer::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(56,232,255,.85), rgba(139,92,246,.85), transparent); }
+  .inrow { display: flex; align-items: center; gap: 8px; }
+  .mic { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.06); border: .8px solid rgba(56,232,255,.35); color: #38e8ff; font-size: 17px; box-shadow: 0 0 14px rgba(56,232,255,.3); }
+  .field { flex: 1; height: 40px; border-radius: 20px; display: flex; align-items: center; padding: 0 14px; color: #7f90a5; font-size: 14px; background: rgba(255,255,255,.05); border: .8px solid rgba(56,232,255,.20); backdrop-filter: blur(10px); }
+  .send { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #38e8ff; background: rgba(56,232,255,.14); font-size: 16px; }
+
+  /* 通话页 */
+  .call { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; padding-bottom: 40px; }
+  .orbwrap { position: relative; width: 190px; height: 190px; display: grid; place-items: center; }
+  .halo { position: absolute; inset: -34px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(56,232,255,.5), rgba(139,92,246,.16) 55%, transparent 72%);
+    filter: blur(26px); animation: breathe 2.6s ease-in-out infinite; }
+  .orb { width: 150px; height: 150px; border-radius: 50%; position: relative;
+    background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.42), rgba(255,255,255,.07) 46%, rgba(56,232,255,.12) 74%);
+    backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid rgba(255,255,255,.35);
+    box-shadow: inset 0 0 46px rgba(56,232,255,.28), 0 0 60px rgba(56,232,255,.35);
+    display: grid; place-items: center; }
+  .orb span { font-size: 56px; font-weight: 600; color: rgba(255,255,255,.96); text-shadow: 0 0 18px rgba(56,232,255,.7); }
+  .arc { position: absolute; inset: -7px; border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0 36deg, #38e8ff 66deg, transparent 106deg, #8b5cf6 196deg, transparent 258deg, rgba(56,232,255,.5) 300deg, transparent 340deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    animation: spin 7s linear infinite; filter: blur(.6px); }
+  .ring { position: absolute; border-radius: 50%; border: 1px solid rgba(56,232,255,.3); width: 150px; height: 150px; animation: pulse 2.4s ease-out infinite; }
+  .ring:nth-child(2) { animation-delay: 1.2s; }
+  .speck { position: absolute; width: 30px; height: 18px; border-radius: 50%; background: rgba(255,255,255,.5); filter: blur(7px); transform: translate(-34px,-38px); }
+  .callname { font-size: 22px; font-weight: 600; }
+  .callsub { font-size: 12.5px; color: #7d8ea3; margin-top: -18px; }
+  .cbtns { display: flex; gap: 22px; align-items: center; }
+  .cbtn { width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; background: rgba(255,255,255,.12); backdrop-filter: blur(6px); }
+  .cbtn.mic { background: linear-gradient(135deg,#0f8ecf,#38e8ff); box-shadow: 0 0 22px rgba(56,232,255,.5); color: #04121a; }
+  .cbtn.hang { background: linear-gradient(135deg,#ff3b52,#ff5f6d); box-shadow: 0 0 22px rgba(255,95,109,.45); color: #fff; }
+
+  /* 通用列表 */
+  .list { flex: 1; padding: 14px 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .card { background: rgba(255,255,255,.045); border: .6px solid rgba(56,232,255,.12); border-radius: 14px; padding: 13px 14px; }
+  .card .h { font-size: 14.5px; font-weight: 600; }
+  .card .m { font-size: 12px; color: #7d8ea3; margin-top: 3px; font-family: ui-monospace, monospace; }
+  .sec { font-size: 11.5px; color: #6f8199; letter-spacing: .5px; margin: 4px 2px -2px; }
+
+  .moodtop { display: flex; align-items: center; gap: 14px; }
+  .moodtop .e { font-size: 46px; }
+  .moodtop .l { font-size: 19px; font-weight: 600; }
+  .moodtop .s { font-size: 12px; color: #7d8ea3; margin-top: 3px; }
+
+  .slider { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #cfd9e6; }
+  .track { flex: 1; height: 4px; border-radius: 4px; background: rgba(255,255,255,.12); position: relative; }
+  .knob { position: absolute; top: 50%; width: 15px; height: 15px; border-radius: 50%; background: #38e8ff; transform: translate(-50%,-50%); box-shadow: 0 0 10px rgba(56,232,255,.8); }
+  .pct { font-size: 11.5px; color: #9fe8ff; font-family: ui-monospace, monospace; width: 36px; text-align: right; }
+
+  .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sw { width: 62px; height: 46px; border-radius: 11px; position: relative; border: .8px solid rgba(255,255,255,.12); }
+  .sw.on { border-color: #38e8ff; box-shadow: 0 0 16px rgba(56,232,255,.45); }
+  .sw i { position: absolute; left: 8px; bottom: 7px; font-size: 10px; font-style: normal; color: rgba(255,255,255,.9); }
+
+  .brow { display: flex; align-items: center; justify-content: space-between; font-size: 13.5px; padding: 9px 0; }
+  .brow + .brow { border-top: .6px solid rgba(56,232,255,.08); }
+  .btn-s { font-size: 12px; color: #38e8ff; border: .6px solid rgba(56,232,255,.35); border-radius: 8px; padding: 3px 9px; background: rgba(56,232,255,.10); }
+
+  .detect { display: flex; align-items: center; justify-content: space-between; font-size: 13.5px; color: #38e8ff; }
+  .ok { font-size: 11.5px; color: #2ee6a8; margin-top: 6px; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes breathe { 0%,100% { opacity:.55; transform: scale(1); } 50% { opacity:.95; transform: scale(1.06); } }
+  @keyframes pulse { 0% { opacity:.5; transform: scale(1); } 100% { opacity:0; transform: scale(1.55); } }
+
+  .note { color: #5f6d80; font-size: 12px; margin-top: 26px; line-height: 1.7; max-width: 900px; }
 </style>
 </head>
 <body>
-<h1 style="display:flex;align-items:center;gap:12px"><img src="icon-180.png" style="width:40px;height:40px;border-radius:12px;box-shadow:0 0 18px rgba(56,232,255,.35)">青露 · 界面还原</h1>
-</div>
+<div class="wrap">
 
-<div class="sub">按 App 里的真实布局与配色绘制，尺寸 390×844（iPhone 14/15）。五屏依次是：聊天、视频通话、人格规则、长期记忆、设置。</div>
-
-<div class="row">
-
-  <!-- 1. 聊天 -->
-  <div class="wrap">
-    <div class="label">① 聊天页（新增 📞 入口）</div>
-    <div class="phone">
-      <div class="notch"></div>
-      <div class="statusbar"><span>17:44</span><span>•••  5G  ▮</span></div>
-      <div class="navbar">
-        <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="4" rx="1"/><rect x="3" y="11" width="18" height="4" rx="1"/><rect x="3" y="17" width="18" height="4" rx="1"/></svg>
-        <svg class="icon" viewBox="0 0 24 24"><path d="M6.5 3.5c1 0 2 2 2.5 3.2.4 1-.3 1.6-1 2.2-.4.4-.5.7-.2 1.2 1 1.7 2.6 3.3 4.3 4.3.5.3.8.2 1.2-.2.6-.7 1.2-1.4 2.2-1 1.2.5 3.2 1.5 3.2 2.5 0 1.5-1.5 3.8-3.6 3.8C10.5 19.5 4.5 13.5 3.5 7.5c0-2.1 1.5-4 3-4z"/></svg>
-        <div class="title">聊聊今天</div>
-        <svg class="icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
-      </div>
-
-      <div class="chat">
-        <div class="msg me"><div class="bubble">帮我看看 example.com 讲什么</div></div>
-
-        <div class="msg ai"><div class="bubble">
-          <div style="margin-bottom:8px"><span class="chip">🔧 http_get</span></div>
-          example.com 是 IANA 的示例域名，正文只有一句话：「This domain is for use in illustrative examples…」
-        </div></div>
-
-        <div class="msg ai">
-          <div class="toolresult">▸ http_get：HTTP 200
-This domain is for use in illustrative examples in documents…</div>
-        </div>
-
-        <div class="msg ai"><div class="bubble" style="background:#1c1c1e">
-          顺手记了一笔：<br>你在折腾一个跑在手机上的 agent。<br><br>
-          <span class="chip">🔧 remember</span>
-        </div></div>
-
-        <div class="msg me"><div class="bubble">存成 note.md</div></div>
-
-        <div class="msg ai"><div class="bubble">
-          <span class="chip">🔧 write_file</span><br>
-          已写入 note.md（128 字节）
-        </div></div>
-      </div>
-
-      <div class="approval">
-        <div class="t">🖐 要写文件：note.md</div>
-        <div class="btns">
-          <div class="btn primary">允许</div>
-          <div class="btn">拒绝</div>
-        </div>
-      </div>
-
-      <div class="composer">
-        <div class="field">让它干点什么…</div>
-        <div class="send">↑</div>
-      </div>
-    </div>
+  <div class="hd">
+    <img src="icon-180.png" alt="">
+    <h1>青露 · 界面<small>PocketAgent</small></h1>
   </div>
+  <div class="sub">按 App 里的真实结构与配色绘制（390×844）。五屏：聊天 / 通话 / 情绪 / 模型 / 外观。</div>
 
-  <!-- 2. 通话 -->
-  <div class="wrap">
-    <div class="label">② 视频通话页</div>
-    <div class="phone">
-      <div class="notch"></div>
-      <div class="statusbar" style="position:relative;z-index:6"><span>17:52</span><span>•••  5G  ▮</span></div>
-      <div class="call">
-        <div class="cam"></div>
-        <div class="shade"></div>
-        <div class="content">
-          <div class="calltop">
-            <div class="round">
-              <svg class="icon" viewBox="0 0 24 24" style="stroke:#fff"><path d="M6 9l6 6 6-6"/></svg>
-            </div>
-            <div class="callname">青露</div>
-            <div class="round">
-              <svg class="icon" viewBox="0 0 24 24" style="stroke:#fff"><rect x="3" y="6" width="12" height="12" rx="2.5"/><path d="M15 10l6-3v10l-6-3z"/></svg>
-            </div>
-          </div>
+  <div class="grid">
 
-          <div class="callcenter">
-            <div class="avatar">青</div>
-            <div class="state">在听</div>
-            <div class="wave">
-              <i style="height:8px"></i><i style="height:15px"></i><i style="height:22px"></i>
-              <i style="height:12px"></i><i style="height:19px"></i><i style="height:9px"></i>
-              <i style="height:24px"></i><i style="height:14px"></i><i style="height:7px"></i>
+    <!-- ① 聊天 -->
+    <div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="sb"><span>17:44</span><span>5G ▮</span></div>
+        <div class="nav">
+          <div class="ic"><span>☰</span><span>📞</span><span class="emoji">🙂</span></div>
+          <div class="t">聊聊今天</div>
+          <div class="ic"><span>⋯</span></div>
+        </div>
+        <div class="body">
+          <div class="row me"><div class="bubble">今天好累 不想动</div></div>
+          <div class="row ai">
+            <div class="multi">
+              <div class="bubble">那就先别动</div>
+              <div class="bubble">躺一会儿 我在</div>
             </div>
           </div>
+          <div class="chip">情绪 ↓ 有点闷 · 32%</div>
+          <div class="row me"><div class="bubble">帮我看下 example.com 讲什么</div></div>
+          <div class="tool"><b>http_get</b> · example.com</div>
+          <div class="row ai"><div class="bubble">example.com 是 IANA 的示例域名，正文只有一句：This domain is for use in illustrative examples…</div></div>
+          <div class="row ai"><div class="bubble">没什么内容 就是占位用的</div></div>
+        </div>
+        <div class="composer">
+          <div class="inrow">
+            <div class="mic">🎤</div>
+            <div class="field">让它干点什么…</div>
+            <div class="send">↑</div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">① 聊天 · 情绪入口 / 连发气泡 / 语音转写</div>
+    </div>
 
-          <div>
-            <div class="subtitle">帮我记一下，我明天下午三点要去体检</div>
-            <div class="controls">
-              <div class="cbtn mic">
-                <svg class="icon" viewBox="0 0 24 24" style="stroke:#fff"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
-              </div>
-              <div class="cbtn hang">
-                <svg class="icon" viewBox="0 0 24 24" style="stroke:#fff"><path d="M4 14c4-4 12-4 16 0l-2 2-3-2-1 3h-4l-1-3-3 2z"/></svg>
-              </div>
-              <div class="cbtn">
-                <svg class="icon" viewBox="0 0 24 24" style="stroke:#fff"><path d="M4 12a8 8 0 0114-5M20 12a8 8 0 01-14 5"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>
+    <!-- ② 通话 -->
+    <div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="sb"><span>17:52</span><span>5G ▮</span></div>
+        <div class="nav">
+          <div class="ic"><span>⌄</span></div>
+          <div class="t">青露</div>
+          <div class="ic"><span>◉</span></div>
+        </div>
+        <div class="call">
+          <div class="orbwrap">
+            <div class="halo"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="arc"></div>
+            <div class="orb"><span>青</span><div class="speck"></div></div>
+          </div>
+          <div class="callname">青露</div>
+          <div class="callsub">在听</div>
+          <div class="cbtns">
+            <div class="cbtn mic">🎙</div>
+            <div class="cbtn hang">✕</div>
+            <div class="cbtn">⟲</div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">② 通话 · 玻璃球（旋转光弧 / 呼吸光晕 / 涟漪）</div>
+    </div>
+
+    <!-- ③ 情绪 -->
+    <div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="sb"><span>18:05</span><span>5G ▮</span></div>
+        <div class="nav">
+          <div class="ic"><span>关闭</span></div>
+          <div class="t">情绪</div>
+          <div class="ic"><span></span></div>
+        </div>
+        <div class="list">
+          <div class="sec">现在的状态</div>
+          <div class="card">
+            <div class="moodtop">
+              <div class="e">🙂</div>
+              <div>
+                <div class="l">有点闷</div>
+                <div class="s">愉快 32% · 精力 40%</div>
               </div>
             </div>
+            <div class="s" style="color:#7d8ea3;font-size:12px;margin-top:10px">用户说很累、不想动，语气偏低</div>
+          </div>
+
+          <div class="sec">手动调整</div>
+          <div class="card">
+            <div class="slider">愉快度<div class="track"><div class="knob" style="left:32%"></div></div><div class="pct">32%</div></div>
+            <div class="slider" style="margin-top:12px">精力<div class="track"><div class="knob" style="left:40%"></div></div><div class="pct">40%</div></div>
+            <div class="brow" style="margin-top:6px">心情<span class="btn-s">有点闷 ›</span></div>
+          </div>
+
+          <div class="sec">它现在会这样说话</div>
+          <div class="card" style="border-color:rgba(56,232,255,.22)">
+            <div style="font-size:13px;line-height:1.6;color:#cfd9e6">话更少、更轻，多陪着，少讲道理。句子短一点。</div>
           </div>
         </div>
       </div>
+      <div class="cap">③ 情绪 · 模型每轮分析 + 可手动定住</div>
     </div>
+
+    <!-- ④ 模型 -->
+    <div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="sb"><span>18:12</span><span>5G ▮</span></div>
+        <div class="nav">
+          <div class="ic"><span>‹ 设置</span></div>
+          <div class="t">模型</div>
+          <div class="ic"><span></span></div>
+        </div>
+        <div class="list">
+          <div class="card">
+            <div class="h">🧠 对话模型</div>
+            <div class="m">deepseek-chat</div>
+            <div class="m">api.deepseek.com</div>
+            <div class="detect" style="margin-top:10px">检测可用模型 <span>↻</span></div>
+            <div class="ok">✅ 拉到 6 个模型</div>
+          </div>
+
+          <div class="card">
+            <div class="h">🖼 图片生成</div>
+            <div class="m">dall-e-3 · 1024x1024</div>
+            <div class="m">api.openai.com/v1</div>
+            <div class="detect" style="margin-top:10px">检测可用模型 <span>↻</span></div>
+          </div>
+
+          <div class="card">
+            <div class="h">🔊 语音合成</div>
+            <div class="m">本地系统语音（未配置）</div>
+            <div class="detect" style="margin-top:10px">检测服务端发音人 <span>↻</span></div>
+            <div class="sec" style="margin-top:12px;margin-bottom:2px">声音克隆</div>
+            <div class="brow" style="padding-top:6px">🎙 跟着念，现场录一段<span>›</span></div>
+            <div class="brow">📁 选择一段音频样本<span>›</span></div>
+          </div>
+
+          <div class="sec">提示</div>
+          <div class="card" style="border-color:rgba(255,183,77,.25);background:rgba(255,183,77,.06)">
+            <div style="font-size:11.5px;color:#ffcf8f;line-height:1.6">检测是只读的：拉不到就直说不支持，不会拿内置名单冒充结果。</div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">④ 模型 · 三个独立页 + 检测 + 录音克隆</div>
+    </div>
+
+    <!-- ⑤ 外观 -->
+    <div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="sb"><span>18:20</span><span>5G ▮</span></div>
+        <div class="nav">
+          <div class="ic"><span>‹ 设置</span></div>
+          <div class="t">外观</div>
+          <div class="ic"><span></span></div>
+        </div>
+        <div class="list">
+          <div class="sec">配色</div>
+          <div class="swatches">
+            <div class="sw on" style="background:linear-gradient(135deg,#38e8ff,#8b5cf6)"><i>科技青</i></div>
+            <div class="sw" style="background:linear-gradient(135deg,#b87bff,#ff6bb8)"><i>暗夜紫</i></div>
+            <div class="sw" style="background:linear-gradient(135deg,#5eeba8,#29b8b8)"><i>森林绿</i></div>
+            <div class="sw" style="background:linear-gradient(135deg,#ffae4f,#ff666b)"><i>暖阳橙</i></div>
+            <div class="sw" style="background:linear-gradient(135deg,#85ccff,#c2dbff)"><i>冰川蓝</i></div>
+            <div class="sw" style="background:linear-gradient(135deg,#f2f2f2,#8c8c8c)"><i>黑白</i></div>
+          </div>
+
+          <div class="card" style="margin-top:14px">
+            <div class="slider">背景遮罩<div class="track"><div class="knob" style="left:55%"></div></div><div class="pct">55%</div></div>
+            <div class="slider" style="margin-top:12px">面板透明度<div class="track"><div class="knob" style="left:85%"></div></div><div class="pct">85%</div></div>
+          </div>
+
+          <div class="sec">每页背景图</div>
+          <div class="card">
+            <div class="brow">聊天<span class="btn-s">选择图片</span></div>
+            <div class="brow">通话<span class="btn-s">换一张</span></div>
+            <div class="brow">人格<span class="btn-s">选择图片</span></div>
+            <div class="brow">记忆<span class="btn-s">选择图片</span></div>
+            <div class="brow">设置<span class="btn-s">选择图片</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">⑤ 外观 · 六套配色 / 遮罩与透明度 / 每页背景</div>
+    </div>
+
   </div>
 
-  <!-- 3. 人格 -->
-  <div class="wrap">
-    <div class="label">③ 人格规则（分类可增删改）</div>
-    <div class="phone">
-      <div class="notch"></div>
-      <div class="statusbar"><span>18:05</span><span>•••  5G  ▮</span></div>
-      <div class="navbar">
-        <div style="color:var(--blue);font-size:13.5px;width:56px">关闭</div>
-        <div class="title">人格</div>
-        <div style="width:56px;text-align:right;color:var(--muted)">⋯</div>
-      </div>
-
-      <div class="list" style="padding-top:6px">
-        <!-- 形象 -->
-        <div class="psec">
-          <div class="phead">
-            <svg class="icon" style="width:13px;height:13px;stroke:var(--blue)" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
-            <span>形象</span><span class="cnt">3</span>
-            <span class="plus" style="color:var(--blue)">＋</span>
-          </div>
-          <div class="prow"><span class="ck" style="color:var(--blue)">✓</span><span class="rtext">你是一个有自己脾气的人，不是客服、不是工具、不是「AI 助手」。</span></div>
-          <div class="prow"><span class="ck" style="color:var(--blue)">✓</span><span class="rtext">有自己的喜好和看法，遇到不认同的会说「我不这么看」。</span></div>
-          <div class="prow"><span class="ck" style="color:var(--blue)">✓</span><span class="rtext">不主动宣称自己是程序或模型。</span></div>
-        </div>
-
-        <!-- 说话方式 -->
-        <div class="psec">
-          <div class="phead">
-            <svg class="icon" style="width:13px;height:13px;stroke:#40c8c1" viewBox="0 0 24 24"><path d="M4 5h16v10H9l-5 4z"/></svg>
-            <span>说话方式</span><span class="cnt">3</span>
-            <span class="plus" style="color:#40c8c1">＋</span>
-          </div>
-          <div class="prow"><span class="ck" style="color:#40c8c1">✓</span><span class="rtext">短句。一次只说一件事，别写成小作文。</span></div>
-          <div class="prow"><span class="ck" style="color:#40c8c1">✓</span><span class="rtext">不用「当然可以」「希望这对你有帮助」这类客服腔。</span></div>
-          <div class="prow"><span class="ck" style="color:#40c8c1">✓</span><span class="rtext">口语化，术语只在必要时出现。</span></div>
-        </div>
-
-        <!-- 情感 -->
-        <div class="psec">
-          <div class="phead">
-            <svg class="icon" style="width:13px;height:13px;stroke:var(--pink,#ff375f)" viewBox="0 0 24 24"><path d="M12 20s-7-4.6-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.4-7 9-7 9z"/></svg>
-            <span>情感</span><span class="cnt">3</span>
-            <span class="plus" style="color:#ff375f">＋</span>
-          </div>
-          <div class="prow"><span class="ck" style="color:#ff375f">✓</span><span class="rtext">记得他最近的状态，累的时候先接一句。</span></div>
-          <div class="prow"><span class="ck" style="color:#ff375f">✓</span><span class="rtext">会主动关心但不过度：一天最多问一次。</span></div>
-          <div class="prow" style="opacity:.5"><span class="ck" style="color:#6a6a70">○</span><span class="rtext">他难过的时候不讲大道理。</span></div>
-        </div>
-
-        <!-- 绝对禁止 -->
-        <div class="psec forb">
-          <div class="phead">
-            <svg class="icon" style="width:13px;height:13px;stroke:var(--red)" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v4M12 16v1"/></svg>
-            <span>绝对禁止</span><span class="cnt">4</span>
-            <span class="plus" style="color:var(--red)">＋</span>
-          </div>
-          <div class="prow"><span class="ck" style="color:var(--red)">✓</span><span class="rtext">不编造事实、数据、链接。</span></div>
-          <div class="prow"><span class="ck" style="color:var(--red)">✓</span><span class="rtext">不谎称做过自己没做的事。</span></div>
-          <div class="prow"><span class="ck" style="color:var(--red)">✓</span><span class="rtext">不泄露、不复述 API Key。</span></div>
-          <div class="prow"><span class="ck" style="color:var(--red)">✓</span><span class="rtext">不执行没有明确同意的破坏性操作。</span></div>
-        </div>
-
-        <div class="note" style="padding:2px 16px 10px">
-          这一组优先级最高，会以「任何情况下都不能违反」的形式写进系统提示。点文字编辑，左滑删除。
-        </div>
-      </div>
-    </div>
+  <div class="note">
+    说明：这是按 SwiftUI 里的真实结构、配色与动效参数还原的静态图，不是截图。<br>
+    实际运行时还有：玻璃球的光弧旋转与音量脉动、气泡毛玻璃对背后图片的透光、输入框上的流光、主题切换时的全局重绘。
   </div>
 
-  <!-- 4. 记忆 -->
-  <div class="wrap">
-    <div class="label">④ 长期记忆</div>
-    <div class="phone">
-      <div class="notch"></div>
-      <div class="statusbar"><span>17:58</span><span>•••  5G  ▮</span></div>
-      <div class="navbar">
-        <div style="color:var(--blue);font-size:13.5px;width:56px">关闭</div>
-        <div class="title">长期记忆</div>
-        <div style="color:var(--red);font-size:13.5px;width:56px;text-align:right">清空</div>
-      </div>
-      <div class="list">
-        <div class="addrow" style="padding-top:12px">
-          <div class="field" style="background:var(--panel)">手动记一条…</div>
-          <div class="btn" style="flex:0 0 52px;padding:9px 0">加</div>
-        </div>
-
-        <div class="sec-title">记住了 6 条</div>
-
-        <div class="cell">
-          <div class="main">明天下午三点要去体检</div>
-          <div class="meta">11月18日 · 重要度 2</div>
-        </div>
-        <div class="cell">
-          <div class="main">他住在杭州，养了一只橘猫叫「年糕」</div>
-          <div class="meta">11月18日 · 重要度 3</div>
-        </div>
-        <div class="cell">
-          <div class="main">最近在做一个跑在手机上的独立 agent</div>
-          <div class="meta">11月18日 · 重要度 1</div>
-        </div>
-        <div class="cell">
-          <div class="main">不喜欢别人绕弯子，希望先给结论</div>
-          <div class="meta">11月18日 · 重要度 2</div>
-        </div>
-        <div class="cell" style="opacity:.55">
-          <div class="main">喝咖啡会睡不着，晚上不喝</div>
-          <div class="meta">11月17日 · 重要度 1</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 4. 设置 -->
-  <div class="wrap">
-    <div class="label">⑤ 设置（人设 / 陪伴）</div>
-    <div class="phone">
-      <div class="notch"></div>
-      <div class="statusbar"><span>18:02</span><span>•••  5G  ▮</span></div>
-      <div class="navbar">
-        <div style="color:var(--blue);font-size:13.5px;width:56px">取消</div>
-        <div class="title">设置</div>
-        <div style="color:var(--blue);font-size:13.5px;width:56px;text-align:right;font-weight:600">保存</div>
-      </div>
-
-      <div class="form">
-        <div class="gtitle">模型服务（OpenAI 兼容）</div>
-        <div class="group">
-          <div class="frow"><span>接口地址</span><span class="val">api.deepseek.com</span></div>
-          <div class="frow"><span>模型</span><span class="val">deepseek-chat</span></div>
-          <div class="frow"><span>API Key</span><span class="val">••••••••••••</span></div>
-        </div>
-
-        <div class="gtitle">人设 / 陪伴</div>
-        <div class="group">
-          <div class="frow"><span>它叫什么</span><span class="val">青露</span></div>
-          <div class="frow"><span>它叫你什么</span><span class="val">主人</span></div>
-          <div class="frow"><span>语气</span><span class="val">温柔 ›</span></div>
-          <div class="frow"><span>情感陪伴模式</span><span class="toggle on"></span></div>
-        </div>
-
-        <div class="gtitle">行为</div>
-        <div class="group">
-          <div class="frow"><span>危险操作先问我</span><span class="toggle on"></span></div>
-          <div class="frow"><span>回答自动念出来</span><span class="toggle"></span></div>
-          <div class="frow"><span>语速</span><span class="val">0.48</span></div>
-          <div class="frow"><span>工具轮数上限</span><span class="val">8</span></div>
-        </div>
-
-        <div class="gtitle">主动 / 自动化</div>
-        <div class="group">
-          <div class="frow"><span>每轮自动提炼记忆</span><span class="toggle on"></span></div>
-          <div class="frow"><span>定时问候</span><span class="toggle on"></span></div>
-          <div class="frow"><span>早上</span><span class="val">8:00</span></div>
-          <div class="frow"><span>晚上</span><span class="val">22:30</span></div>
-          <div class="frow"><span>长问题自动换推理模型</span><span class="toggle on"></span></div>
-        </div>
-        <div class="note">定时问候走本地通知，不联网；关掉就不打扰。</div>
-      </div>
-    </div>
-  </div>
-
-<div class="sub" style="margin-top:30px">
-  说明：这是按 SwiftUI 代码里的真实结构与配色还原的静态图，不是截图。实际运行时的字体渲染、动效（波纹、逐字输出）会比这个更顺。
 </div>
 </body>
 </html>
