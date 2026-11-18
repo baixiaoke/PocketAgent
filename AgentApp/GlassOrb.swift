@@ -3,115 +3,150 @@ import SwiftUI
 /// 通话页头像：玻璃球 + 旋转光弧 + 呼吸光晕
 struct GlassOrb: View {
     let letter: String
-    let level: Float          // 0…1 麦克风音量
+    let level: Float
     let active: Bool
 
     @State private var spin: Double = 0
     @State private var breathe: CGFloat = 0
     @State private var ripple: CGFloat = 0
 
-    private let size: CGFloat = 150
+    private var size: CGFloat { 150 }
 
     var body: some View {
         ZStack {
-            glowLayer
-            if active { rippleLayer }
-            arcLayer
-            bodyLayer
-            coreLayer
-            letterLayer
-            highlightLayer
+            glowView
+            if active {
+                rippleView
+            }
+            arcView
+            bodyView
+            coreView
+            letterView
+            highlightView
         }
         .frame(width: size * 1.2, height: size * 1.2)
-        .scaleEffect(1 + CGFloat(level) * 0.07)
+        .scaleEffect(1.0 + CGFloat(level) * 0.07)
         .animation(.easeOut(duration: 0.12), value: level)
         .onAppear(perform: startAnimations)
     }
 
-    // MARK: 层
-    private var glowLayer: some View {
-        let colors: [Color] = [Theme.cyan.opacity(0.55), Theme.violet.opacity(0.18), .clear]
+    // MARK: 光晕
+    private var glowView: some View {
+        let c1: Color = Theme.cyan.opacity(0.55)
+        let c2: Color = Theme.violet.opacity(0.18)
+        let c3: Color = Color.clear
+        let stops: [Color] = [c1, c2, c3]
+        let grad: RadialGradient = RadialGradient(colors: stops,
+                                                 center: UnitPoint.center,
+                                                 startRadius: 10,
+                                                 endRadius: size * 0.78)
+        let side: CGFloat = size * 1.5
+        let op: Double = 0.55 + Double(breathe) * 0.35
+        let sc: CGFloat = 1.0 + breathe * 0.05 + CGFloat(level) * 0.08
+
         return Circle()
-            .fill(RadialGradient(colors: colors, center: .center,
-                                 startRadius: 10, endRadius: size * 0.78))
-            .frame(width: size * 1.5, height: size * 1.5)
+            .fill(grad)
+            .frame(width: side, height: side)
             .blur(radius: 26)
-            .opacity(0.55 + Double(breathe) * 0.35)
-            .scaleEffect(1 + breathe * 0.05 + CGFloat(level) * 0.08)
+            .opacity(op)
+            .scaleEffect(sc)
     }
 
-    private var rippleLayer: some View {
+    // MARK: 涟漪
+    private var rippleView: some View {
         ZStack {
-            ForEach(0..<2, id: \.self) { i in
-                Circle()
-                    .stroke(Theme.cyan.opacity(0.35 - Double(i) * 0.12), lineWidth: 1)
-                    .frame(width: size, height: size)
-                    .scaleEffect(1 + (ripple + CGFloat(i) * 0.5) * 0.55)
-                    .opacity(max(0, 1 - (ripple + CGFloat(i) * 0.5)))
-            }
+            ringView(index: 0)
+            ringView(index: 1)
         }
     }
 
-    private var arcLayer: some View {
-        let stops: [Color] = [
-            .clear,
-            Theme.cyan.opacity(0.95),
-            .clear,
-            Theme.violet.opacity(0.95),
-            .clear,
-            Theme.cyan.opacity(0.5),
-            .clear
-        ]
+    private func ringView(index: Int) -> some View {
+        let phase: CGFloat = ripple + CGFloat(index) * 0.5
+        let scale: CGFloat = 1.0 + phase * 0.55
+        let raw: CGFloat = 1.0 - phase
+        let clamped: CGFloat = raw < 0 ? 0 : raw
+        let opacity: Double = Double(clamped)
+        let base: Double = 0.35 - Double(index) * 0.12
+        let strokeColor: Color = Theme.cyan.opacity(base)
+
         return Circle()
-            .strokeBorder(
-                AngularGradient(gradient: Gradient(colors: stops), center: .center),
-                lineWidth: 2.2)
-            .frame(width: size + 12, height: size + 12)
-            .rotationEffect(.degrees(spin))
+            .stroke(strokeColor, lineWidth: 1)
+            .frame(width: size, height: size)
+            .scaleEffect(scale)
+            .opacity(opacity)
+    }
+
+    // MARK: 旋转光弧
+    private var arcView: some View {
+        let a: Color = Color.clear
+        let b: Color = Theme.cyan.opacity(0.95)
+        let c: Color = Theme.violet.opacity(0.95)
+        let d: Color = Theme.cyan.opacity(0.5)
+        let stops: [Color] = [a, b, a, c, a, d, a]
+        let grad: AngularGradient = AngularGradient(gradient: Gradient(colors: stops),
+                                                    center: UnitPoint.center)
+        let side: CGFloat = size + 12
+
+        return Circle()
+            .strokeBorder(grad, lineWidth: 2.2)
+            .frame(width: side, height: side)
+            .rotationEffect(Angle(degrees: spin))
             .blur(radius: 1.4)
     }
 
-    private var bodyLayer: some View {
+    // MARK: 玻璃球主体
+    private var bodyView: some View {
         Circle()
             .fill(.ultraThinMaterial)
             .opacity(0.78)
             .frame(width: size, height: size)
     }
 
-    private var coreLayer: some View {
-        let colors: [Color] = [Color.white.opacity(0.42), .clear]
-        return ZStack {
+    // MARK: 内高光 + 描边
+    private var coreView: some View {
+        ZStack {
             Circle()
-                .fill(RadialGradient(colors: colors,
-                                     center: UnitPoint(x: 0.32, y: 0.26),
-                                     startRadius: 1, endRadius: size * 0.62))
+                .fill(innerGlow)
                 .frame(width: size, height: size)
-
             Circle()
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.55),
-                                 Color.white.opacity(0.05),
-                                 Theme.cyan.opacity(0.35)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing),
-                    lineWidth: 1)
+                .strokeBorder(edgeStroke, lineWidth: 1)
                 .frame(width: size, height: size)
         }
     }
 
-    private var letterLayer: some View {
+    private var innerGlow: RadialGradient {
+        let colors: [Color] = [Color.white.opacity(0.42), Color.clear]
+        let center: UnitPoint = UnitPoint(x: 0.32, y: 0.26)
+        return RadialGradient(colors: colors, center: center,
+                              startRadius: 1, endRadius: size * 0.62)
+    }
+
+    private var edgeStroke: LinearGradient {
+        let colors: [Color] = [Color.white.opacity(0.55),
+                               Color.white.opacity(0.05),
+                               Theme.cyan.opacity(0.35)]
+        return LinearGradient(colors: colors,
+                              startPoint: UnitPoint.topLeading,
+                              endPoint: UnitPoint.bottomTrailing)
+    }
+
+    // MARK: 字
+    private var letterView: some View {
         Text(letter)
             .font(.system(size: 56, weight: .semibold, design: .rounded))
             .foregroundStyle(Color.white.opacity(0.96))
             .shadow(color: Theme.cyan.opacity(0.55), radius: 10)
     }
 
-    private var highlightLayer: some View {
-        Ellipse()
+    // MARK: 左上高光
+    private var highlightView: some View {
+        let dx: CGFloat = -(size * 0.22)
+        let dy: CGFloat = -(size * 0.24)
+        return Ellipse()
             .fill(Color.white.opacity(0.5))
             .frame(width: 30, height: 18)
             .blur(radius: 7)
-            .offset(x: -size * 0.22, y: -size * 0.24)
+            .offset(x: dx, y: dy)
     }
 
     // MARK: 动画
