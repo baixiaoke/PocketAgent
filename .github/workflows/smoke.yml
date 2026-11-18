@@ -5,8 +5,16 @@ jobs:
   hello:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "hello from ubuntu"; uname -a
-  mac:
+      - run: echo ok
+  mac14:
     runs-on: macos-14
     steps:
-      - run: echo "hello from macos"; sw_vers
+      - run: sw_vers
+  mac15:
+    runs-on: macos-15
+    steps:
+      - run: sw_vers
+  maclatest:
+    runs-on: macos-latest
+    steps:
+      - run: sw_vers
