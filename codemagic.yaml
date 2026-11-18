@@ -8,20 +8,43 @@ workflows:
       vars:
         XCODE_PROJECT: "PocketAgent.xcodeproj"
         SCHEME: "PocketAgent"
+        XCODEGEN_VERSION: "2.42.0"
     scripts:
-      - name: 安装 xcodegen
+      - name: 准备 xcodegen（brew 失败就下载二进制）
         script: |
-          brew install xcodegen || true
+          set -e
+          if command -v xcodegen >/dev/null 2>&1; then
+            echo "xcodegen 已存在：$(xcodegen --version)"
+            exit 0
+          fi
+          echo "尝试 brew 安装…"
+          brew install xcodegen >/dev/null 2>&1 || echo "brew 安装失败，改下载二进制"
+          if command -v xcodegen >/dev/null 2>&1; then
+            echo "brew 安装成功：$(xcodegen --version)"
+            exit 0
+          fi
+          mkdir -p "$HOME/bin"
+          curl -fsSL -o /tmp/xcodegen.zip \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          unzip -q -o /tmp/xcodegen.zip -d /tmp/xcodegen-dist
+          cp -R /tmp/xcodegen-dist/xcodegen/bin/* "$HOME/bin/" 2>/dev/null || \
+            find /tmp/xcodegen-dist -name xcodegen -type f -exec cp {} "$HOME/bin/" \;
+          chmod +x "$HOME/bin/xcodegen" || true
+          export PATH="$HOME/bin:$PATH"
           xcodegen --version
 
-      - name: 生成工程
+      - name: 生成 Xcode 工程
         script: |
+          set -e
+          export PATH="$HOME/bin:$PATH"
           cd "$CM_BUILD_DIR"
           xcodegen generate
           ls -la
+          xcodebuild -list -project "$XCODE_PROJECT"
 
-      - name: 编译（不签名）
+      - name: 编译 archive（不签名）
         script: |
+          set -e
           cd "$CM_BUILD_DIR"
           xcodebuild \
             -project "$XCODE_PROJECT" \
@@ -34,13 +57,23 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            CODE_SIGN_ENTITLEMENTS=""
+            CODE_SIGN_ENTITLEMENTS="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
 
-      - name: 打包 ipa
+      - name: 打包 ipa / tipa
         script: |
+          set -e
           cd "$CM_BUILD_DIR"
+          APP="build/PocketAgent.xcarchive/Products/Applications/PocketAgent.app"
+          if [ ! -d "$APP" ]; then
+            echo "没找到 .app，实际内容："
+            ls -R build/PocketAgent.xcarchive/Products || true
+            exit 1
+          fi
+          rm -rf build/Payload
           mkdir -p build/Payload
-          cp -R build/PocketAgent.xcarchive/Products/Applications/PocketAgent.app build/Payload/
+          cp -R "$APP" build/Payload/
           cd build
           zip -qry PocketAgent-unsigned.ipa Payload
           cp PocketAgent-unsigned.ipa PocketAgent.tipa
