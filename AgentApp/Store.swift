@@ -65,6 +65,12 @@ final class Store {
             settings = s
         }
         apiKey = Keychain.get("apiKey")
+
+        // 品牌迁移：旧默认名「小椒」→ 新名「青露」
+        if settings.agentName == "小椒" {
+            settings.agentName = "青露"
+            saveSettings(settings)
+        }
     }
 
     func saveSessions(_ list: [ChatSession]) {

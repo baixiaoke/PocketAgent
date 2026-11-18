@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="小椒">
+<meta name="apple-mobile-web-app-title" content="青露">
 <meta name="theme-color" content="#151517">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>小椒 · 手机 agent</title>
+<title>青露 · 手机 agent</title>
 <style>
   :root{
     --bg:#151517; --panel:#1e1e22; --line:#2c2c33; --text:#e9e9ee;
@@ -125,7 +125,7 @@
 <body>
 
 <header>
-  <div class="title" id="title">小椒</div>
+  <div class="title" id="title">青露</div>
   <button id="btnNew" title="新对话">＋</button>
   <button id="btnSet" title="设置">⋯</button>
 </header>
@@ -170,7 +170,7 @@
 
 /* ═══════════ 配置与存储 ═══════════ */
 
-const DEFAULT_PROMPT = `你是运行在用户手机上的独立 agent，名字叫「小椒」。
+const DEFAULT_PROMPT = `你是运行在用户手机上的独立 agent，名字叫「青露」。
 你能用这些工具：查时间、抓网页正文、读写剪贴板、打开链接、把内容存成文件下载。
 规则：
 1. 需要事实或最新信息时用 fetch_url 去抓，不要凭记忆编。
@@ -503,7 +503,7 @@ function renderAll() {
   logEl.innerHTML = '';
   if (messages.length === 0) {
     logEl.innerHTML =
-      '<div class="empty"><b>小椒在这儿</b>' +
+      '<div class="empty"><b>青露在这儿</b>' +
       '第一次用先点右上角 ⋯ 填 API Key<br><br>' +
       '然后可以试：<br>' +
       '「抓 example.com 的标题读给我」<br>' +
@@ -630,7 +630,7 @@ document.getElementById('btnNew').addEventListener('click', () => {
   if (messages.length && !confirm('开新对话？当前记录会清空。')) return;
   messages = [];
   persist();
-  titleEl.textContent = '小椒';
+  titleEl.textContent = '青露';
   renderAll();
 });
 

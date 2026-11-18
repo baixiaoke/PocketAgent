@@ -57,7 +57,7 @@ struct AgentSettings: Codable, Equatable {
     var model: String = "deepseek-chat"
 
     // 人设 / 情感陪伴
-    var agentName: String = "小椒"
+    var agentName: String = "青露"
     var userTitle: String = "主人"
     var tone: String = "温柔"              // 温柔 / 俏皮 / 直接 / 自然
     var companionMode: Bool = true
