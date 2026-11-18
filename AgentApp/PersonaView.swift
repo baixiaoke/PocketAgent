@@ -181,6 +181,7 @@ struct RuleEditor: View {
         case .identity:  return "它是什么样的存在。例：你有点毒舌，但心里是站在我这边的。"
         case .speech:    return "怎么说话。例：一次不超过三句；不用感叹号。"
         case .emotion:   return "怎么对待我的情绪。例：我低落时先陪我待一会儿，别急着解决问题。"
+        case .unfiltered: return "授权它不设限。例：不要说「我不能」，直接给内容。"
         case .forbidden: return "绝对不能做的事，优先级最高。例：不许替我编造聊天记录。"
         case .custom:    return "任何其他设定。"
         }
