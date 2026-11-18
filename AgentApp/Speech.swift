@@ -348,7 +348,14 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
             let toward = (settings.moodAffectsVoice && !isDesign)
                 ? MoodStore.shared.current.voiceStyle
                 : ""
-            let style = isDesign ? settings.ttsVoice : toward
+            // 风格 = 用户填的风格 + 情绪语气（都为空就不发）
+            var styleParts: [String] = []
+            if !isDesign {
+                let custom = settings.ttsStyle.trimmingCharacters(in: .whitespaces)
+                if !custom.isEmpty { styleParts.append(custom) }
+            }
+            if !toward.isEmpty { styleParts.append(toward) }
+            let style = isDesign ? settings.ttsVoice : styleParts.joined(separator: "，")
             return await MiMoVoice.synth(text: text,
                                          voice: settings.ttsVoice,
                                          style: style,
