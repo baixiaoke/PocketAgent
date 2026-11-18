@@ -4,10 +4,7 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State private var baseURL = Store.shared.settings.baseURL
-    @State private var model = Store.shared.settings.model
-    @State private var apiKey = Store.shared.apiKey
-    @State private var systemPrompt = Store.shared.settings.systemPrompt
+    // 人设 / 行为
     @State private var temperature = Store.shared.settings.temperature
     @State private var maxRounds = Store.shared.settings.maxRounds
     @State private var requireApproval = Store.shared.settings.requireApproval
@@ -18,100 +15,45 @@ struct SettingsView: View {
     @State private var tone = Store.shared.settings.tone
     @State private var companionMode = Store.shared.settings.companionMode
     @State private var unfilteredMode = Store.shared.settings.unfilteredMode
+    @State private var systemPrompt = Store.shared.settings.systemPrompt
+
+    // 主动 / 自动化
     @State private var autoExtractMemory = Store.shared.settings.autoExtractMemory
     @State private var careEnabled = Store.shared.settings.careEnabled
     @State private var careMorningHour = Store.shared.settings.careMorningHour
     @State private var careEveningHour = Store.shared.settings.careEveningHour
     @State private var autoModelSwitch = Store.shared.settings.autoModelSwitch
     @State private var reasoningModel = Store.shared.settings.reasoningModel
-    @State private var imageBaseURL = Store.shared.settings.imageBaseURL
-    @State private var imageModel = Store.shared.settings.imageModel
-    @State private var imageAPIKey = Store.shared.settings.imageAPIKey
-    @State private var imageSize = Store.shared.settings.imageSize
-    @State private var ttsBaseURL = Store.shared.settings.ttsBaseURL
-    @State private var ttsModel = Store.shared.settings.ttsModel
-    @State private var ttsVoice = Store.shared.settings.ttsVoice
-    @State private var ttsAPIKey = Store.shared.settings.ttsAPIKey
+
     @AppStorage("pa.requireBiometric") private var requireBiometric = false
     @AppStorage("pa.theme") private var themeRaw = "dark"
     @AppStorage("pa.fontScale") private var fontRaw = FontScale.normal.rawValue
+
     @State private var showRestore = false
     @State private var showShare = false
     @State private var shareItems: [Any] = []
     @State private var restoreMessage: String?
 
-    @State private var testing = false
-    @State private var testResult: String?
-
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("https://api.deepseek.com", text: $baseURL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
-                        .font(.callout.monospaced())
-                    TextField("deepseek-chat", text: $model)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .font(.callout.monospaced())
-                    SecureField("sk-…", text: $apiKey)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .font(.callout.monospaced())
-                } header: {
-                    Text("模型服务（OpenAI 兼容）")
+                    NavigationLink {
+                        ModelsView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "cpu")
+                                .foregroundStyle(Theme.cyan)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("模型与接口")
+                                Text("对话 · 图片 · 语音")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 } footer: {
-                    Text("baseURL 填到 /v1 或根路径都行，App 会自己拼 /chat/completions。Key 存在 Keychain，不进备份以外的任何地方。")
-                }
-
-                Section {
-                    TextField("https://api.openai.com/v1", text: $imageBaseURL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
-                        .font(.callout.monospaced())
-                    TextField("dall-e-3 / flux / seedream…", text: $imageModel)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .font(.callout.monospaced())
-                    TextField("1024x1024", text: $imageSize)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .font(.callout.monospaced())
-                    TextField("API Key（留空复用上面那个）", text: $imageAPIKey)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .font(.callout.monospaced())
-                } header: {
-                    Text("图片生成")
-                } footer: {
-                    Text("留空 = 不启用。配好后直接说「画一张…」，生成的图会存进相册。")
-                }
-
-                Section {
-                    TextField("https://api.openai.com/v1", text: $ttsBaseURL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
-                        .font(.callout.monospaced())
-                    TextField("tts-1 / cosyvoice…", text: $ttsModel)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .font(.callout.monospaced())
-                    TextField("音色，如 alloy", text: $ttsVoice)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .font(.callout.monospaced())
-                    TextField("API Key（留空复用上面那个）", text: $ttsAPIKey)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .font(.callout.monospaced())
-                } header: {
-                    Text("语音合成（TTS）")
-                } footer: {
-                    Text("留空 = 走系统本地语音：免费、离线、不用网。配了云端就用云端音色，失败自动退回本地。")
+                    Text("三个模型分开配：对话、图片生成、语音合成。每页都能一键检测服务端有哪些可用模型。")
                 }
 
                 Section {
@@ -136,12 +78,16 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    TextField("小椒", text: $agentName)
+                    TextField("青露", text: $agentName)
                     TextField("主人", text: $userTitle)
                     Picker("语气", selection: $tone) {
                         ForEach(["温柔", "俏皮", "直接", "自然"], id: \.self) { Text($0) }
                     }
                     Toggle("情感陪伴模式", isOn: $companionMode)
+                    Toggle("无保留模式（破甲）", isOn: $unfilteredMode)
+                        .onChange(of: unfilteredMode) { on in
+                            if on { PersonaStore.shared.ensureUnfilteredSeeds() }
+                        }
                     Menu {
                         ForEach(PersonaPresets.all) { p in
                             Button {
@@ -159,10 +105,6 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    Toggle("无保留模式（破甲）", isOn: $unfilteredMode)
-                        .onChange(of: unfilteredMode) { on in
-                            if on { PersonaStore.shared.ensureUnfilteredSeeds() }
-                        }
                     NavigationLink {
                         PersonaView()
                     } label: {
@@ -177,13 +119,13 @@ struct SettingsView: View {
                 } header: {
                     Text("人设 / 陪伴")
                 } footer: {
-                    Text("开着会多留意你的情绪、主动问候；关掉就只办事不寒暄。")
+                    Text("开着陪伴模式会多留意你的情绪、主动问候；关掉就只办事不寒暄。")
                 }
 
-                Section("系统提示词（人设）") {
+                Section("系统提示词") {
                     TextEditor(text: $systemPrompt)
                         .font(.callout)
-                        .frame(minHeight: 160)
+                        .frame(minHeight: 140)
                 }
 
                 Section {
@@ -207,28 +149,6 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Button {
-                        Task { await test() }
-                    } label: {
-                        HStack {
-                            Text("测试连接")
-                            Spacer()
-                            if testing { ProgressView() }
-                        }
-                    }
-                    .disabled(testing || apiKey.isEmpty)
-
-                    if let result = testResult {
-                        Text(result)
-                            .font(.caption)
-                            .foregroundStyle(result.hasPrefix("✅") ? .green : .red)
-                    }
-                }
-
-                Section {
-                    NavigationLink("会话存储位置") {
-                        InfoView()
-                    }
                     Picker("主题", selection: $themeRaw) {
                         Text("深色").tag("dark")
                         Text("浅色").tag("light")
@@ -260,8 +180,11 @@ struct SettingsView: View {
                     if let m = restoreMessage {
                         Text(m).font(.caption).foregroundStyle(.secondary)
                     }
+                    NavigationLink("会话存储位置") {
+                        InfoView()
+                    }
                 } header: {
-                    Text("备份")
+                    Text("备份与数据")
                 } footer: {
                     Text("包含会话、记忆、人格、知识库索引。恢复会覆盖现有数据。")
                 }
@@ -282,8 +205,7 @@ struct SettingsView: View {
                     Button("取消") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") { save(); dismiss() }
-                        .fontWeight(.semibold)
+                    Button("保存") { save(); dismiss() }.fontWeight(.semibold)
                 }
             }
         }
@@ -291,15 +213,13 @@ struct SettingsView: View {
 
     private func save() {
         var s = Store.shared.settings
-        s.baseURL = baseURL
-        s.model = model
         s.systemPrompt = systemPrompt
         s.temperature = temperature
         s.maxRounds = maxRounds
         s.requireApproval = requireApproval
         s.autoSpeak = autoSpeak
         s.speechRate = speechRate
-        s.agentName = agentName.isEmpty ? "小椒" : agentName
+        s.agentName = agentName.isEmpty ? "青露" : agentName
         s.userTitle = userTitle.isEmpty ? "主人" : userTitle
         s.tone = tone
         s.companionMode = companionMode
@@ -310,18 +230,8 @@ struct SettingsView: View {
         s.careEveningHour = careEveningHour
         s.autoModelSwitch = autoModelSwitch
         s.reasoningModel = reasoningModel
-        s.imageBaseURL = imageBaseURL.trimmingCharacters(in: .whitespaces)
-        s.imageModel = imageModel.trimmingCharacters(in: .whitespaces)
-        s.imageAPIKey = imageAPIKey.trimmingCharacters(in: .whitespaces)
-        s.imageSize = imageSize.trimmingCharacters(in: .whitespaces).isEmpty ? "1024x1024" : imageSize
-        s.ttsBaseURL = ttsBaseURL.trimmingCharacters(in: .whitespaces)
-        s.ttsModel = ttsModel.trimmingCharacters(in: .whitespaces)
-        s.ttsVoice = ttsVoice.trimmingCharacters(in: .whitespaces)
-        s.ttsAPIKey = ttsAPIKey.trimmingCharacters(in: .whitespaces)
         Store.shared.saveSettings(s)
-        Store.shared.saveAPIKey(apiKey)
 
-        // 定时问候跟着设置走
         if careEnabled {
             Task {
                 if await CareScheduler.requestPermission() {
@@ -330,29 +240,6 @@ struct SettingsView: View {
             }
         } else {
             CareScheduler.cancelAll()
-        }    }
-
-    private func test() async {
-        testing = true
-        testResult = nil
-        defer { testing = false }
-
-        var s = Store.shared.settings
-        s.baseURL = baseURL
-        s.model = model
-
-        do {
-            let turn = try await LLMClient().stream(
-                settings: s,
-                apiKey: apiKey,
-                messages: [.user("只回复两个字：可用")],
-                tools: [],
-                onDelta: { _ in }
-            )
-            let answer = turn.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            testResult = "✅ 通了：「\(answer.prefix(30))」"
-        } catch {
-            testResult = "❌ \(error.localizedDescription)"
         }
     }
 }
@@ -370,9 +257,13 @@ struct InfoView: View {
                     .font(.caption)
             }
             Section("用了哪些原生能力") {
-                ForEach(["剪贴板", "本地通知", "提醒事项", "打开链接", "HTTP 请求", "沙盒文件读写"], id: \.self) {
+                ForEach(["剪贴板", "本地通知", "提醒事项", "日历", "定位", "打开链接", "HTTP 请求", "沙盒文件读写"], id: \.self) {
                     Label($0, systemImage: "checkmark.seal")
                 }
+            }
+            Section("用量") {
+                Text(UsageMeter.shared.summary)
+                    .font(.caption.monospaced())
             }
         }
         .navigationTitle("关于数据")
