@@ -3,6 +3,12 @@ import Foundation
 /// 小米 MiMo 的语音：走 /chat/completions，音频在 message.audio.data（base64 WAV）
 enum MiMoVoice {
 
+    /// 官方内置音色（仅 mimo-v2.5-tts 模型支持）
+    static let builtinVoiceIDs = [
+        "mimo_default", "冰糖", "茉莉", "苏打", "白桦",
+        "Mia", "Chloe", "Milo", "Dean"
+    ]
+
     /// 判断是不是该走 MiMo 协议
     static func looksLikeMiMo(model: String, base: String) -> Bool {
         let m = model.lowercased()
@@ -53,20 +59,35 @@ enum MiMoVoice {
         if root.hasSuffix("/chat/completions") { root = String(root.dropLast("/chat/completions".count)) }
         guard let url = URL(string: root + "/chat/completions") else { return nil }
 
-        let isClone = model.lowercased().contains("voiceclone")
-        var body: [String: Any] = [
-            "model": model,
-            "messages": [
-                ["role": "assistant", "content": text],
-                ["role": "user", "content": instruction.isEmpty ? "自然、清楚的中文女声" : instruction]
-            ],
-            "stream": false
-        ]
+        let lower = model.lowercased()
+        let isClone = lower.contains("voiceclone")
+        let isDesign = lower.contains("voicedesign")
 
+        var messages: [[String: String]] = [["role": "assistant", "content": text]]
+        if isDesign {
+            // voicedesign：user 必填，写音色描述
+            messages.insert(["role": "user", "content": instruction.isEmpty ? "自然、清楚的中文女声" : instruction], at: 0)
+        } else if !instruction.isEmpty {
+            // 内置音色 / 克隆：user 可选，当风格指令用
+            messages.insert(["role": "user", "content": instruction], at: 0)
+        }
+
+        var audioField: [String: Any] = ["format": "wav"]
         if isClone {
             guard let ref = referenceDataURL() else { return nil }
-            body["audio"] = ["voice": ref]
+            audioField["voice"] = ref
+        } else if !isDesign {
+            // 内置音色：voice 传音色 id
+            let v = instruction.trimmingCharacters(in: .whitespaces)
+            audioField["voice"] = v.isEmpty ? "mimo_default" : v
         }
+
+        var body: [String: Any] = [
+            "model": model,
+            "messages": messages,
+            "stream": false,
+            "audio": audioField
+        ]
 
         guard let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
 

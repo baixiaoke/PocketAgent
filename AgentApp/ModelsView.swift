@@ -399,7 +399,7 @@ struct SpeechModelPage: View {
                 } header: {
                     Text("小米 MiMo")
                 } footer: {
-                    Text("模型填 mimo-v2.5-tts-voicedesign = 按「音色」那栏的描述生成声音；填 mimo-v2.5-tts-voiceclone = 用上面这段参考音频克隆。参考音频只在本地，随请求一起发出去。")
+                    Text("三个模型分工：mimo-v2.5-tts = 用内置音色（mimo_default / 冰糖 / 茉莉 / 苏打 / 白桦 / Mia / Chloe / Milo / Dean）；mimo-v2.5-tts-voicedesign = 「音色」那栏写描述，自动造声音；mimo-v2.5-tts-voiceclone = 用上面的参考音频克隆。参考音频只在本地，随请求发出去。")
                 }
             }
 
@@ -500,9 +500,15 @@ struct SpeechModelPage: View {
         // 小米 MiMo 没有音色列表接口：音色 = 一段文字描述（voicedesign）或参考音频（voiceclone）
         if MiMoVoice.looksLikeMiMo(model: model, base: base) {
             busy = false
-            voices = []
+            voices = MiMoVoice.builtinVoiceIDs
             usingFallbackVoices = false
-            voiceStatus = "ℹ️ 小米 MiMo 没有音色列表：这栏填音色描述（voicedesign），或随便起个名（voiceclone）"
+            if model.lowercased().contains("voicedesign") {
+                voiceStatus = "ℹ️ 当前是 voicedesign 模型：不支持内置音色，这栏写音色描述"
+            } else if model.lowercased().contains("voiceclone") {
+                voiceStatus = "ℹ️ 当前是 voiceclone 模型：音色来自参考音频，这栏只作备注"
+            } else {
+                voiceStatus = "✅ 小米内置音色 9 个（mimo-v2.5-tts 可用）"
+            }
             return
         }
 
