@@ -457,15 +457,30 @@ struct SpeechModelPage: View {
                     }
                 }
                 Button {
+                    if audioURL == nil {
+                        cloneStatus = "先点上面「选择一段音频样本」，选好再来"
+                        return
+                    }
+                    if cloneName.trimmingCharacters(in: .whitespaces).isEmpty {
+                        cloneName = "我的音色"
+                    }
                     Task { await doClone() }
                 } label: {
                     HStack {
-                        Label("上传并克隆", systemImage: "person.crop.circle.badge.plus")
+                        Image(systemName: "person.crop.circle.badge.plus")
+                        Text(cloning ? "上传中…" : "上传并克隆").fontWeight(.semibold)
                         Spacer()
                         if cloning { ProgressView() }
                     }
                 }
-                .disabled(cloning || audioURL == nil || cloneName.isEmpty)
+                .buttonStyle(.borderedProminent)
+                .disabled(cloning)
+
+                if audioURL == nil {
+                    Text("① 先选音频　② 起个名字　③ 点上传并克隆")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
 
                 if let s = cloneStatus {
                     Text(s).font(.caption).foregroundStyle(s.hasPrefix("✅") ? .green : .orange)
