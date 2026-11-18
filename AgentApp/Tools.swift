@@ -110,6 +110,10 @@ final class ToolRegistry {
             ToolSpec(name: "calendar_today",
                      description: "读今天的日历日程（需日历权限）。用户问「今天有什么安排」时用它。",
                      parameters: obj(["days": num("往后看几天，默认 0 = 只看今天")], required: [])),
+
+            ToolSpec(name: "delegate",
+                     description: "把复杂问题拆成几个独立子问题，并行让多个子 agent 分别研究，再汇总对比。最多 3 个。",
+                     parameters: obj(["questions": arr("子问题列表，每条一句话")], required: ["questions"])),
         ]
     }
 
@@ -322,6 +326,42 @@ final class ToolRegistry {
                 }
                 return (out, false)
 
+            case "delegate":
+                let qs = (args["questions"] as? [String]) ?? []
+                guard !qs.isEmpty else { return ("至少给一个问题", true) }
+                let limited = Array(qs.prefix(3))
+                let settings = Store.shared.settings
+                let key = Store.shared.apiKey
+                guard !key.isEmpty else { return ("还没有 API Key", true) }
+
+                var slots = [String](repeating: "", count: limited.count)
+                let boxes = limited.map { _ in TextBox() }
+
+                await withTaskGroup(of: (Int, String).self) { group in
+                    for (i, q) in limited.enumerated() {
+                        let box = boxes[i]
+                        group.addTask {
+                            var s = settings
+                            s.temperature = 0.4
+                            s.maxRounds = 1
+                            _ = try? await LLMClient().stream(
+                                settings: s, apiKey: key,
+                                messages: [.user(q)], tools: [],
+                                onDelta: { piece in box.text += piece })
+                            return (i, box.text)
+                        }
+                    }
+                    for await (i, text) in group {
+                        if i >= 0 && i < slots.count { slots[i] = text }
+                    }
+                }
+
+                var out = ""
+                for (i, q) in limited.enumerated() {
+                    out += "【子问题 \(i + 1)】\(q)\n\(slots[i].isEmpty ? "（无结果）" : slots[i])\n\n"
+                }
+                return (out, false)
+
             case "calendar_today":
                 let days = (args["days"] as? Int) ?? 0
                 return await CalendarBox.upcoming(days: days)
@@ -378,6 +418,9 @@ final class ToolRegistry {
     }
     private func str(_ desc: String) -> [String: Any] { ["type": "string", "description": desc] }
     private func num(_ desc: String) -> [String: Any] { ["type": "integer", "description": desc] }
+    private func arr(_ desc: String) -> [String: Any] {
+        ["type": "array", "items": ["type": "string"], "description": desc]
+    }
 }
 
 // MARK: - 通知
@@ -453,4 +496,9 @@ enum CalendarBox {
         }
         return ("日程：\n" + lines.joined(separator: "\n"), false)
     }
+}
+
+/// 并发子任务收集用的小盒子（跨任务传递可变状态）
+final class TextBox: @unchecked Sendable {
+    var text = ""
 }

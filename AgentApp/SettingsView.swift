@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -32,6 +33,12 @@ struct SettingsView: View {
     @State private var ttsVoice = Store.shared.settings.ttsVoice
     @State private var ttsAPIKey = Store.shared.settings.ttsAPIKey
     @AppStorage("pa.requireBiometric") private var requireBiometric = false
+    @AppStorage("pa.theme") private var themeRaw = "dark"
+    @AppStorage("pa.fontScale") private var fontRaw = FontScale.normal.rawValue
+    @State private var showRestore = false
+    @State private var showShare = false
+    @State private var shareItems: [Any] = []
+    @State private var restoreMessage: String?
 
     @State private var testing = false
     @State private var testResult: String?
@@ -221,9 +228,55 @@ struct SettingsView: View {
                     NavigationLink("会话存储位置") {
                         InfoView()
                     }
+                    Picker("主题", selection: $themeRaw) {
+                        Text("深色").tag("dark")
+                        Text("浅色").tag("light")
+                        Text("跟随系统").tag("auto")
+                    }
+                    Picker("字号", selection: $fontRaw) {
+                        ForEach(FontScale.allCases) { f in
+                            Text(f.rawValue).tag(f.rawValue)
+                        }
+                    }
+                } header: {
+                    Text("外观")
+                }
+
+                Section {
+                    Button {
+                        if let url = Backup.export() {
+                            shareItems = [url]
+                            showShare = true
+                        }
+                    } label: {
+                        Label("导出备份（\(Backup.sizeText())）", systemImage: "square.and.arrow.up")
+                    }
+                    Button {
+                        showRestore = true
+                    } label: {
+                        Label("从备份恢复", systemImage: "square.and.arrow.down")
+                    }
+                    if let m = restoreMessage {
+                        Text(m).font(.caption).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("备份")
+                } footer: {
+                    Text("包含会话、记忆、人格、知识库索引。恢复会覆盖现有数据。")
                 }
             }
             .navigationTitle("设置")
+            .fileImporter(isPresented: $showRestore, allowedContentTypes: [.json]) { result in
+                if case .success(let urls) = result, let url = urls.first {
+                    let n = Backup.restore(from: url)
+                    restoreMessage = n > 0
+                        ? "已恢复 \(n) 个文件，重启 App 后生效"
+                        : "恢复失败：文件格式不对"
+                }
+            }
+            .sheet(isPresented: $showShare) {
+                ShareSheet(items: shareItems)
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }

@@ -17,6 +17,7 @@ struct ChatView: View {
     @State private var showShare = false
     @State private var shareItems: [Any] = []
     @State private var showSearch = false
+    @State private var editing: ChatMessage?
     @ObservedObject private var folder = ExternalFolder.shared
     @FocusState private var focused: Bool
 
@@ -141,6 +142,11 @@ struct ChatView: View {
             .sheet(isPresented: $showSearch) {
                 SearchSheet().environmentObject(rt)
             }
+            .sheet(item: $editing) { msg in
+                EditMessageSheet(message: msg) { newText in
+                    rt.editAndResend(msg.id, newText: newText)
+                }
+            }
         }
     }
 
@@ -156,6 +162,12 @@ struct ChatView: View {
                                 Button {
                                     UIPasteboard.general.string = msg.content
                                 } label: { Label("复制", systemImage: "doc.on.doc") }
+
+                                if msg.role == .user {
+                                    Button {
+                                        editing = msg
+                                    } label: { Label("编辑后重发", systemImage: "pencil") }
+                                }
 
                                 if msg.role == .assistant {
                                     Button {
@@ -427,4 +439,48 @@ struct ShareSheet: UIViewControllerRepresentable {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
     func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - 编辑消息
+struct EditMessageSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let message: ChatMessage
+    let onSave: (String) -> Void
+
+    @State private var draft: String
+
+    init(message: ChatMessage, onSave: @escaping (String) -> Void) {
+        self.message = message
+        self.onSave = onSave
+        _draft = State(initialValue: message.content)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextEditor(text: $draft)
+                        .font(.callout)
+                        .frame(minHeight: 160)
+                } footer: {
+                    Text("保存后会把这条之后的内容删掉，用新内容重新问一遍。")
+                }
+            }
+            .navigationTitle("编辑消息")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("重发") {
+                        let t = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !t.isEmpty else { dismiss(); return }
+                        onSave(t)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
 }

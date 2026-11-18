@@ -234,6 +234,15 @@ final class AgentRuntime: ObservableObject {
         start(text)
     }
 
+    /// 编辑某条用户消息并重发：截断到它之前，用新内容重跑
+    func editAndResend(_ messageID: String, newText: String) {
+        stop()
+        guard let idx = current.messages.firstIndex(where: { $0.id == messageID }) else { return }
+        current.messages = Array(current.messages.prefix(idx))
+        persist()
+        start(newText)
+    }
+
     func delete(_ session: ChatSession) {
         sessions.removeAll { $0.id == session.id }
         if current.id == session.id {
