@@ -216,6 +216,7 @@ struct SpeechModelPage: View {
     ]
 
     // MARK: 克隆模型
+    @ViewBuilder
     private var cloneSection: some View {
         Section {
             HStack {
