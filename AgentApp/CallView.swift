@@ -161,6 +161,13 @@ struct CallView: View {
                 .font(.footnote)
                 .foregroundStyle(.white.opacity(0.75))
 
+            if !voice.lastSource.isEmpty {
+                Text(voice.lastSource)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.42))
+                    .lineLimit(1)
+            }
+
             if speech.isListening {
                 HStack(spacing: 4) {
                     ForEach(0..<9) { i in
@@ -302,7 +309,8 @@ struct CallView: View {
             return
         }
         localLines.append(reply)
-        if rt.settings.companionMode || rt.settings.autoSpeak {
+        let ttsReady = !rt.settings.ttsModel.isEmpty && !rt.settings.ttsBaseURL.isEmpty
+        if rt.settings.companionMode || rt.settings.autoSpeak || ttsReady {
             voice.rate = Float(rt.settings.speechRate)
             let settings = rt.settings
             Task { await voice.speakSmart(reply, settings: settings, fallbackKey: Store.shared.apiKey) }

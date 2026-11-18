@@ -177,6 +177,8 @@ enum SpeechReview {
 @MainActor
 final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var isSpeaking = false
+    /// 上一次念的来源：云端 / 本地（给界面显示用）
+    @Published var lastSource: String = ""
 
     private let synth = AVSpeechSynthesizer()
     private var player: AVAudioPlayer?
@@ -208,6 +210,23 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         isSpeaking = false
     }
 
+    /// 通话里语音识别占着会话，这里按优先级试几种，都能出声
+    private func activateForPlayback() {
+        let s = AVAudioSession.sharedInstance()
+        do {
+            try s.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            try s.setActive(true)
+        } catch {
+            do {
+                try s.setCategory(.playAndRecord, mode: .spokenAudio,
+                                  options: [.defaultToSpeaker, .allowBluetooth, .duckOthers])
+                try s.setActive(true)
+            } catch {
+                // 实在设不了就直接播，AVAudioPlayer 自己会去抢
+            }
+        }
+    }
+
     // MARK: - 云端 TTS（配了就走云端，没配就走系统语音）
     func speakSmart(_ text: String, settings: AgentSettings, fallbackKey: String) async {
         let clean = Self.stripMarkdown(text)
@@ -216,14 +235,15 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         if !settings.ttsBaseURL.isEmpty, !settings.ttsModel.isEmpty {
             if let data = await Self.fetchSpeech(clean, settings: settings, fallbackKey: fallbackKey) {
                 stop()
+                activateForPlayback()
                 do {
-                    let session = AVAudioSession.sharedInstance()
-                    try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-                    try session.setActive(true)
                     let p = try AVAudioPlayer(data: data)
+                    p.prepareToPlay()
                     player = p
                     p.play()
                     isSpeaking = true
+                    let who = settings.ttsVoice.isEmpty ? settings.ttsModel : settings.ttsVoice
+                    lastSource = "云端 · " + who
                     Task { @MainActor in
                         while let cur = self.player, cur.isPlaying {
                             try? await Task.sleep(nanoseconds: 200_000_000)
@@ -232,10 +252,13 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
                     }
                     return
                 } catch {
-                    // 云端播放失败，退回本地
+                    lastSource = "云端音频播放失败：" + error.localizedDescription
                 }
+            } else if !settings.ttsBaseURL.isEmpty, !settings.ttsModel.isEmpty {
+                lastSource = "云端没返回音频，已退回本地"
             }
         }
+        lastSource = "本地系统语音"
         speak(clean)
     }
 

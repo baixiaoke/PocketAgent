@@ -27,24 +27,45 @@ enum MiMoVoice {
     static var referenceURL: URL { voiceDir().appendingPathComponent("reference.wav") }
 
     static func hasReference() -> Bool {
-        FileManager.default.fileExists(atPath: referenceURL.path)
+        currentReferenceFile() != nil
     }
 
     static func referenceSize() -> Int {
-        (try? Data(contentsOf: referenceURL).count) ?? 0
+        guard let f = currentReferenceFile() else { return 0 }
+        return (try? Data(contentsOf: f).count) ?? 0
     }
 
+    /// 保存参考音频：wav 就存 .wav，其它（mp3）存 .mp3
     static func saveReference(_ data: Data) throws {
-        try data.write(to: referenceURL, options: .atomic)
+        let isWav = data.count > 4 && String(data: data.prefix(4), encoding: .ascii) == "RIFF"
+        // 清掉另一种格式，避免两份
+        try? FileManager.default.removeItem(at: isWav ? referenceURLMP3 : referenceURL)
+        try data.write(to: isWav ? referenceURL : referenceURLMP3, options: .atomic)
     }
 
     static func clearReference() {
         try? FileManager.default.removeItem(at: referenceURL)
+        try? FileManager.default.removeItem(at: referenceURLMP3)
+    }
+
+    static var referenceURLMP3: URL { voiceDir().appendingPathComponent("reference.mp3") }
+
+    /// 当前参考音频文件（wav 优先，其次 mp3）
+    static func currentReferenceFile() -> URL? {
+        if FileManager.default.fileExists(atPath: referenceURL.path) { return referenceURL }
+        if FileManager.default.fileExists(atPath: referenceURLMP3.path) { return referenceURLMP3 }
+        return nil
+    }
+
+    static func referenceMIME() -> String {
+        guard let f = currentReferenceFile() else { return "audio/wav" }
+        return f.pathExtension.lowercased() == "mp3" ? "audio/mpeg" : "audio/wav"
     }
 
     private static func referenceDataURL() -> String? {
-        guard let data = try? Data(contentsOf: referenceURL), !data.isEmpty else { return nil }
-        return "data:audio/wav;base64," + data.base64EncodedString()
+        guard let f = currentReferenceFile(),
+              let data = try? Data(contentsOf: f), !data.isEmpty else { return nil }
+        return "data:" + referenceMIME() + ";base64," + data.base64EncodedString()
     }
 
     // MARK: - 合成

@@ -189,6 +189,20 @@ struct ImageModelPage: View {
     var body: some View {
         Form {
             Section {
+                LabeledContent("地址", value: base.isEmpty ? "未设" : base)
+                LabeledContent("模型", value: model.isEmpty ? "未设（走本地语音）" : model)
+                LabeledContent("音色", value: voice.isEmpty ? "未设" : voice)
+                if MiMoVoice.hasReference() {
+                    LabeledContent("参考音频",
+                                   value: "\(MiMoVoice.referenceSize() / 1024) KB · \(MiMoVoice.referenceMIME())")
+                }
+            } header: {
+                Text("当前生效")
+            } footer: {
+                Text("改动要点右上角「保存」，或者用下面克隆区的「保存并生效」。")
+            }
+
+            Section {
                 TextField("https://api.openai.com/v1", text: $base)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                     .keyboardType(.URL).font(.callout.monospaced())
@@ -295,6 +309,20 @@ struct SpeechModelPage: View {
 
     var body: some View {
         Form {
+            Section {
+                LabeledContent("地址", value: base.isEmpty ? "未设" : base)
+                LabeledContent("模型", value: model.isEmpty ? "未设（走本地语音）" : model)
+                LabeledContent("音色", value: voice.isEmpty ? "未设" : voice)
+                if MiMoVoice.hasReference() {
+                    LabeledContent("参考音频",
+                                   value: "\(MiMoVoice.referenceSize() / 1024) KB · \(MiMoVoice.referenceMIME())")
+                }
+            } header: {
+                Text("当前生效")
+            } footer: {
+                Text("改动要点右上角「保存」，或者用下面克隆区的「保存并生效」。")
+            }
+
             Section {
                 TextField("https://api.openai.com/v1", text: $base)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -453,6 +481,19 @@ struct SpeechModelPage: View {
                 if let s = cloneStatus {
                     Text(s).font(.caption).foregroundStyle(s.hasPrefix("✅") ? .green : .orange)
                 }
+
+                Button {
+                    save()
+                    cloneStatus = "✅ 已保存：模型 \(model.isEmpty ? "未设" : model) · 音色 \(voice.isEmpty ? "未设" : voice)"
+                } label: {
+                    HStack {
+                        Image(systemName: "checkmark.seal.fill")
+                        Text("保存并生效").fontWeight(.semibold)
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+
                 if !cloneLog.isEmpty {
                     Text(cloneLog)
                         .font(.caption2.monospaced())
@@ -560,8 +601,8 @@ struct SpeechModelPage: View {
 
         // 小米 MiMo：不走 multipart 上传，参考音频直接存在本地
         if MiMoVoice.looksLikeMiMo(model: model, base: base) {
-            guard data.count > 44, String(data: data.prefix(4), encoding: .ascii) == "RIFF" else {
-                cloneStatus = "❌ MiMo 只吃 WAV 参考音频，这段不是 wav（用「跟着念，现场录一段」，它录的就是 wav）"
+            guard data.count > 44 else {
+                cloneStatus = "❌ 这段音频太短或读不出来"
                 return
             }
             do {
