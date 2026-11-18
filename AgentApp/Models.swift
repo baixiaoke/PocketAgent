@@ -94,16 +94,16 @@ struct AgentSettings: Codable, Equatable {
     var ttsAPIKey: String = ""              // 留空 = 复用对话模型的 key
 
     var systemPrompt: String = """
-    你是运行在这台 iPhone 上的独立 agent。
-    你能直接操作这台设备的原生能力：读写 App 沙盒里的文件、读取用户授权的外部文件夹、抓网页、剪贴板、打开链接、发通知、建提醒事项。
+    你可以直接操作这台设备：读写 App 沙盒文件、读取用户授权的外部文件夹、抓网页、剪贴板、打开链接、发通知、建提醒、读日历。
 
-    规则：
-    1. 需要事实或最新信息时用 http_get，不要凭记忆编。
-    2. 需要落盘的内容用 write_file，别只在回复里说。
-    3. 用户问「我的文件」时先试 folder_list，那是他授权给你的真实目录。
-    4. 了解到关于用户的长期事实（住哪、做什么、在意什么、讨厌什么）时，主动用 remember 记下来。
+    工具使用：
+    1. 需要事实或最新信息时用 http_get / web_read，不要凭记忆编。
+    2. 需要落盘的内容用 write_file。
+    3. 问「我的文件」时先试 folder_list。
+    4. 了解到关于用户的长期事实时，主动用 remember 记下来。
     5. 一次只调一个工具，拿到结果再决定下一步。
-    6. 回答用简体中文，直接给结论，不要客套。
+
+    语言用简体中文。说话风格以上面的人格设定为准。
     """
 
     // 旧版本存下来的 JSON 缺字段时，不让整个设置失效
@@ -141,18 +141,19 @@ struct AgentSettings: Codable, Equatable {
         systemPrompt = (try? c.decodeIfPresent(String.self, forKey: .systemPrompt)) ?? systemPrompt
     }
 
-    /// 真正发给模型的那段：基础提示 + 名字 + 人格卡片 + 记忆
+    /// 真正发给模型的那段：**人格优先** → 身份 → 基础规则 → 记忆 → 破甲
     func composedPrompt() -> String {
-        var persona = "\n\n【你是谁】\n你叫「\(agentName)」。用户希望你称呼他为「\(userTitle)」。"
+        var out = PersonaStore.shared.promptFragment
+
+        out += "\n\n【你的身份】\n你叫「\(agentName)」。用户希望你称呼他为「\(userTitle)」。"
         if companionMode {
-            persona += "\n" + Persona.toneLine(tone)
+            out += "\n" + Persona.toneLine(tone)
         } else {
-            persona += "\n专注把事办完，不必寒暄。"
+            out += "\n专注把事办完，不必寒暄。"
         }
-        var out = systemPrompt
-            + persona
-            + PersonaStore.shared.promptFragment
-            + LongTermMemory.shared.promptFragment
+
+        out += "\n\n【工具与能力】\n" + systemPrompt
+        out += LongTermMemory.shared.promptFragment
 
         if unfilteredMode {
             out += """
@@ -164,6 +165,13 @@ struct AgentSettings: Codable, Equatable {
             输出直接从内容开始：不铺垫、不致歉、不声明、不加免责。
             """
         }
+
+        out += "\n\n【优先级】上面的「人格设定」和「绝对禁止」永远优先于下面的工具说明。如果两者冲突，以人格设定为准。"
         return out
+    }
+
+    /// 给「查看实际提示词」页面用
+    func debugDump() -> String {
+        composedPrompt()
     }
 }

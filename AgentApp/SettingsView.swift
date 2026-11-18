@@ -116,6 +116,11 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    NavigationLink {
+                        PromptInspectorView()
+                    } label: {
+                        Label("查看实际提示词", systemImage: "doc.text.magnifyingglass")
+                    }
                 } header: {
                     Text("人设 / 陪伴")
                 } footer: {
