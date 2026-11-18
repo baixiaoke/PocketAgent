@@ -187,7 +187,8 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Toggle("每轮自动提炼记忆", isOn: $autoExtractMemory)                    Toggle("定时问候", isOn: $careEnabled)
+                    Toggle("每轮自动提炼记忆", isOn: $autoExtractMemory)
+                    Toggle("定时问候", isOn: $careEnabled)
                     if careEnabled {
                         Stepper("早上 \(careMorningHour):00", value: $careMorningHour, in: 5...11)
                         Stepper("晚上 \(careEveningHour):30", value: $careEveningHour, in: 18...23)
@@ -267,12 +268,11 @@ struct SettingsView: View {
             }
             .navigationTitle("设置")
             .fileImporter(isPresented: $showRestore, allowedContentTypes: [.json]) { result in
-                if case .success(let urls) = result, let url = urls.first {
-                    let n = Backup.restore(from: url)
-                    restoreMessage = n > 0
-                        ? "已恢复 \(n) 个文件，重启 App 后生效"
-                        : "恢复失败：文件格式不对"
-                }
+                guard case .success(let url) = result else { return }
+                let n = Backup.restore(from: url)
+                restoreMessage = n > 0
+                    ? "已恢复 \(n) 个文件，重启 App 后生效"
+                    : "恢复失败：文件格式不对"
             }
             .sheet(isPresented: $showShare) {
                 ShareSheet(items: shareItems)
