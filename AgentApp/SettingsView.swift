@@ -179,6 +179,26 @@ struct SettingsView: View {
                             Text(f.rawValue).tag(f.rawValue)
                         }
                     }
+                    HStack {
+                        Text("背景遮罩")
+                        Slider(value: Binding(
+                            get: { ThemeManager.shared.backgroundDim },
+                            set: { ThemeManager.shared.setBackgroundDim($0) }
+                        ), in: 0...1)
+                        Text("\(Int(ThemeManager.shared.backgroundDim * 100))%")
+                            .font(.caption.monospaced())
+                            .frame(width: 42, alignment: .trailing)
+                    }
+                    HStack {
+                        Text("面板透明度")
+                        Slider(value: Binding(
+                            get: { ThemeManager.shared.glassOpacity },
+                            set: { ThemeManager.shared.setGlassOpacity($0) }
+                        ), in: 0.2...1)
+                        Text("\(Int(ThemeManager.shared.glassOpacity * 100))%")
+                            .font(.caption.monospaced())
+                            .frame(width: 42, alignment: .trailing)
+                    }
                 } header: {
                     Text("外观")
                 } footer: {

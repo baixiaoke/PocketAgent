@@ -122,11 +122,29 @@ final class ThemeManager: ObservableObject {
 
     @Published private(set) var paletteID: String
     @Published private(set) var backgroundRevision = 0
+    /// 背景图遮罩浓度 0（全透）…1（压黑）
+    @Published private(set) var backgroundDim: Double
+    /// 玻璃面板不透明度 0.2…1
+    @Published private(set) var glassOpacity: Double
 
     private let themeKey = "pa.paletteID"
 
     private init() {
         paletteID = UserDefaults.standard.string(forKey: themeKey) ?? "cyan"
+        let dim = UserDefaults.standard.object(forKey: "pa.bgDim") as? Double
+        backgroundDim = dim ?? 0.55
+        let glass = UserDefaults.standard.object(forKey: "pa.glassOpacity") as? Double
+        glassOpacity = glass ?? 0.85
+    }
+
+    func setBackgroundDim(_ v: Double) {
+        backgroundDim = max(0, min(1, v))
+        UserDefaults.standard.set(backgroundDim, forKey: "pa.bgDim")
+    }
+
+    func setGlassOpacity(_ v: Double) {
+        glassOpacity = max(0.2, min(1, v))
+        UserDefaults.standard.set(glassOpacity, forKey: "pa.glassOpacity")
     }
 
     var palette: Palette { Palettes.palette(paletteID) }

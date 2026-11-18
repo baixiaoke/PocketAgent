@@ -72,7 +72,9 @@ struct PageBackground: View {
                 }
                 .ignoresSafeArea()
 
-                LinearGradient(colors: [.black.opacity(0.55), .black.opacity(0.35), .black.opacity(0.72)],
+                LinearGradient(colors: [.black.opacity(tm.backgroundDim + 0.05),
+                                        .black.opacity(max(0, tm.backgroundDim - 0.2)),
+                                        .black.opacity(min(1, tm.backgroundDim + 0.15))],
                                startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
             }
@@ -110,7 +112,11 @@ struct GlassCard: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .background {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .opacity(ThemeManager.shared.glassOpacity)
+            }
             .overlay(
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .stroke(
