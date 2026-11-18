@@ -146,17 +146,9 @@ struct CallView: View {
     private var centerStatus: some View {
         VStack(spacing: 14) {
             if !videoMode {
-                Circle()
-                    .fill(LinearGradient(colors: [.blue.opacity(0.85), .purple.opacity(0.7)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 132, height: 132)
-                    .overlay(
-                        Text(String(rt.settings.agentName.prefix(1)))
-                            .font(.system(size: 54, weight: .bold))
-                            .foregroundStyle(.white)
-                    )
-                    .scaleEffect(1 + CGFloat(speech.level) * 0.06)
-                    .animation(.easeOut(duration: 0.15), value: speech.level)
+                GlassOrb(letter: String(rt.settings.agentName.prefix(1)),
+                         level: speech.level,
+                         active: speech.isListening || voice.isSpeaking)
             }
 
             Text(statusText)
