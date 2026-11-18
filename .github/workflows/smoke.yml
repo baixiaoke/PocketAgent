@@ -1,0 +1,12 @@
+﻿name: smoke
+on:
+  workflow_dispatch:
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "hello from ubuntu"; uname -a
+  mac:
+    runs-on: macos-14
+    steps:
+      - run: echo "hello from macos"; sw_vers
