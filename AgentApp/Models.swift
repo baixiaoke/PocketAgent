@@ -101,15 +101,17 @@ struct AgentSettings: Codable, Equatable {
         systemPrompt = (try? c.decodeIfPresent(String.self, forKey: .systemPrompt)) ?? systemPrompt
     }
 
-    /// 真正发给模型的那段：人设 + 语气 + 记忆
+    /// 真正发给模型的那段：基础提示 + 名字 + 人格卡片 + 记忆
     func composedPrompt() -> String {
         var persona = "\n\n【你是谁】\n你叫「\(agentName)」。用户希望你称呼他为「\(userTitle)」。"
         if companionMode {
             persona += "\n" + Persona.toneLine(tone)
-            persona += "\n除了办事，也留意用户的情绪：他累的时候先接一句，别急着给方案。"
         } else {
             persona += "\n专注把事办完，不必寒暄。"
         }
-        return systemPrompt + persona + LongTermMemory.shared.promptFragment
+        return systemPrompt
+            + persona
+            + PersonaStore.shared.promptFragment
+            + LongTermMemory.shared.promptFragment
     }
 }

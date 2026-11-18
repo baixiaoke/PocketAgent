@@ -10,6 +10,7 @@ struct ChatView: View {
     @State private var showFolderPicker = false
     @State private var showCall = false
     @State private var showMemory = false
+    @State private var showPersona = false
     @ObservedObject private var folder = ExternalFolder.shared
     @FocusState private var focused: Bool
 
@@ -69,6 +70,9 @@ struct ChatView: View {
                         Button {
                             showMemory = true
                         } label: { Label("记忆（\(LongTermMemory.shared.items.count)）", systemImage: "brain.head.profile") }
+                        Button {
+                            showPersona = true
+                        } label: { Label("人格", systemImage: "person.text.rectangle") }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -92,6 +96,9 @@ struct ChatView: View {
             }
             .sheet(isPresented: $showMemory) {
                 MemorySheet()
+            }
+            .sheet(isPresented: $showPersona) {
+                PersonaView()
             }
         }
     }

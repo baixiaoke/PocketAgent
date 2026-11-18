@@ -70,6 +70,17 @@ struct SettingsView: View {
                         ForEach(["温柔", "俏皮", "直接", "自然"], id: \.self) { Text($0) }
                     }
                     Toggle("情感陪伴模式", isOn: $companionMode)
+                    NavigationLink {
+                        PersonaView()
+                    } label: {
+                        HStack {
+                            Label("人格规则", systemImage: "person.text.rectangle")
+                            Spacer()
+                            Text("\(PersonaStore.shared.rules.count) 条")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 } header: {
                     Text("人设 / 陪伴")
                 } footer: {
