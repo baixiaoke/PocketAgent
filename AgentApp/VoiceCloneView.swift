@@ -369,19 +369,28 @@ struct VoiceCloneView: View {
             return
         }
 
-        let (id, err) = await ModelCatalog.cloneVoice(
+        var probe = Store.shared.settings
+        probe.ttsBaseURL = base
+        probe.ttsAPIKey = ""
+
+        let r = await ModelCatalog.cloneVoice(
             base: base, apiKey: apiKey,
             name: voiceName,
             audio: data,
-            filename: "voice.m4a")
+            filename: "voice.m4a",
+            format: .generic,
+            settingsForVerify: probe,
+            fallbackKey: apiKey)
 
-        if let id = id {
-            finalMessage = "✅ 提交成功：\(id)"
-            if id != "已提交" { onCloned(id) }
+        if let id = r.voiceID, r.verified {
+            finalMessage = "✅ 克隆成功并验证通过：\(id)"
+            onCloned(id)
             try? await Task.sleep(nanoseconds: 900_000_000)
             dismiss()
+        } else if let id = r.voiceID {
+            finalMessage = "⚠️ 提交了，但验证没过：\(id)\n\(r.log.suffix(240))"
         } else {
-            finalMessage = "❌ \(err ?? "克隆失败")"
+            finalMessage = "❌ 没成功\n\(r.log.suffix(300))"
         }
     }
 }

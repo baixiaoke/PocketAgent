@@ -289,6 +289,8 @@ struct SpeechModelPage: View {
     @State private var showAudioPicker = false
     @State private var audioURL: URL?
     @State private var cloneStatus: String?
+    @State private var cloneLog: String = ""
+    @State private var cloneFormat: ModelCatalog.CloneFormat = .generic
     @State private var cloning = false
 
     var body: some View {
@@ -397,6 +399,11 @@ struct SpeechModelPage: View {
                     }
                 }
 
+                Picker("接口格式", selection: $cloneFormat) {
+                    ForEach(ModelCatalog.CloneFormat.allCases) { f in
+                        Text(f.rawValue).tag(f)
+                    }
+                }
                 TextField("克隆音色名字（如：我的声音）", text: $cloneName)
                 Button {
                     showAudioPicker = true
@@ -420,6 +427,12 @@ struct SpeechModelPage: View {
 
                 if let s = cloneStatus {
                     Text(s).font(.caption).foregroundStyle(s.hasPrefix("✅") ? .green : .orange)
+                }
+                if !cloneLog.isEmpty {
+                    Text(cloneLog)
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 }
             } header: {
                 Text("声音克隆")
@@ -504,18 +517,33 @@ struct SpeechModelPage: View {
             return
         }
 
-        let (id, err) = await ModelCatalog.cloneVoice(
+        var probe = Store.shared.settings
+        probe.ttsBaseURL = base
+        probe.ttsModel = model
+        probe.ttsAPIKey = key
+
+        let r = await ModelCatalog.cloneVoice(
             base: base.isEmpty ? Store.shared.settings.baseURL : base,
             apiKey: useKey,
             name: cloneName,
             audio: data,
-            filename: url.lastPathComponent)
+            filename: url.lastPathComponent,
+            format: cloneFormat,
+            settingsForVerify: probe,
+            fallbackKey: Store.shared.apiKey)
 
-        if let id = id {
-            cloneStatus = "✅ 克隆提交成功：\(id)（可点上面的检测发音人刷新列表）"
-            if id != "已提交" { voice = id; save() }
+        cloneLog = r.log
+
+        if let id = r.voiceID {
+            if r.verified {
+                cloneStatus = "✅ 克隆成功并验证通过：\(id)"
+                voice = id
+                save()
+            } else {
+                cloneStatus = "⚠️ 提交成功但验证没过：\(id)（先看下面的服务端原话）"
+            }
         } else {
-            cloneStatus = "❌ \(err ?? "克隆失败")"
+            cloneStatus = "❌ 没成功，看下面的服务端原话"
         }
     }
 

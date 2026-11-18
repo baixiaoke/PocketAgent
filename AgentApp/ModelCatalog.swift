@@ -119,58 +119,114 @@ enum ModelCatalog {
     }
 
     // MARK: - 克隆声音
-    /// ElevenLabs 风格：POST /voices/add（multipart: name + files[]）
-    /// 不同厂商字段不同，这里按最常见格式提交，成功后返回服务端给的 voice_id
+    /// 各家字段不一样，这里按三种最常见格式轮着试，并记录每一步服务端原话
+    enum CloneFormat: String, CaseIterable, Identifiable {
+        case generic = "通用 multipart"
+        case eleven  = "ElevenLabs 风格"
+        case miniMax = "MiniMax 风格"
+        var id: String { rawValue }
+    }
+
+    struct CloneResult {
+        var voiceID: String?
+        var log: String = ""
+        var verified: Bool = false
+    }
+
     static func cloneVoice(base: String,
                            apiKey: String,
                            name: String,
                            audio: Data,
-                           filename: String) async -> (String?, String?) {
-        guard !base.isEmpty, !apiKey.isEmpty else { return (nil, "先填接口地址和 Key") }
-
-        let boundary = "----PocketAgent\(Int(Date().timeIntervalSince1970))"
-        var body = Data()
-
-        func field(_ k: String, _ v: String) {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"\(k)\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(v)\r\n".data(using: .utf8)!)
+                           filename: String,
+                           format: CloneFormat,
+                           settingsForVerify: AgentSettings? = nil,
+                           fallbackKey: String = "") async -> CloneResult {
+        var result = CloneResult()
+        guard !base.isEmpty, !apiKey.isEmpty else {
+            result.log = "先填接口地址和 Key"
+            return result
         }
 
-        field("name", name)
-        field("description", "PocketAgent 克隆音色")
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"files\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/mpeg\r\n\r\n".data(using: .utf8)!)
-        body.append(audio)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        let boundary = "----PocketAgent\(Int(Date().timeIntervalSince1970))"
 
-        var lastError = ""
-        for path in ["/voices/add", "/voice/clone", "/audio/voices"] {
-            for url in candidates(base, path) {
+        func build(fields: [(String, String)], fileField: String) -> Data {
+            var body = Data()
+            for (k, v) in fields {
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"\(k)\"\r\n\r\n".data(using: .utf8)!)
+                body.append("\(v)\r\n".data(using: .utf8)!)
+            }
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(fileField)\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+            body.append("Content-Type: audio/mpeg\r\n\r\n".data(using: .utf8)!)
+            body.append(audio)
+            body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+            return body
+        }
+
+        // 每家：路径 + 字段
+        var plans: [(path: String, body: Data)] = []
+        switch format {
+        case .generic:
+            plans = [
+                ("/voices/add", build(fields: [("name", name), ("description", "PocketAgent 克隆音色")], fileField: "files")),
+                ("/voice/clone", build(fields: [("name", name), ("voice_name", name)], fileField: "file"))
+            ]
+        case .eleven:
+            plans = [
+                ("/v1/voices/add", build(fields: [("name", name), ("description", "PocketAgent")], fileField: "files"))
+            ]
+        case .miniMax:
+            plans = [
+                ("/v1/voice/clone", build(fields: [("voice_id", name), ("name", name)], fileField: "file")),
+                ("/v1/voice/upload", build(fields: [("voice_id", name)], fileField: "file"))
+            ]
+        }
+
+        for plan in plans {
+            for url in candidates(base, plan.path) {
                 var req = URLRequest(url: url)
                 req.httpMethod = "POST"
-                req.timeoutInterval = 120
+                req.timeoutInterval = 150
                 req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
                 req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-                req.httpBody = body
+                req.httpBody = plan.body
+
                 do {
                     let (data, resp) = try await URLSession.shared.data(for: req)
                     let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
-                    if (200..<300).contains(code) {
-                        if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                            let id = (obj["voice_id"] as? String) ?? (obj["id"] as? String) ?? (obj["data"] as? [String: Any])?["voice_id"] as? String
-                            return (id ?? "已提交", nil)
-                        }
-                        return ("已提交", nil)
+                    let text = String(data: data, encoding: .utf8) ?? ""
+                    result.log += "[\(plan.path)] HTTP \(code)：\(text.prefix(180))\n"
+
+                    guard (200..<300).contains(code) else { continue }
+
+                    // 取 voice id
+                    var vid: String?
+                    if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        vid = (obj["voice_id"] as? String)
+                            ?? (obj["id"] as? String)
+                            ?? ((obj["data"] as? [String: Any])?["voice_id"] as? String)
                     }
-                    let msg = String(data: data, encoding: .utf8) ?? ""
-                    lastError = "HTTP \(code) \(msg.prefix(120))"
+                    result.voiceID = vid ?? name
+
+                    // 立刻验证：拿这个音色合成一句，能出声才算成功
+                    if let s = settingsForVerify, let v = result.voiceID {
+                        var test = s
+                        test.ttsVoice = v
+                        if let audio = await VoiceOut.fetchSpeech("测试", settings: test, fallbackKey: fallbackKey),
+                           !audio.isEmpty {
+                            result.verified = true
+                            result.log += "验证通过：用「\(v)」合成成功（\(audio.count) 字节）\n"
+                        } else {
+                            result.log += "验证失败：拿「\(v)」合成不出音频（可能是 id 不对，或该服务不支持这个音色）\n"
+                        }
+                    }
+                    return result
                 } catch {
-                    lastError = error.localizedDescription
+                    result.log += "[\(plan.path)] 请求异常：\(error.localizedDescription)\n"
                 }
             }
         }
-        return (nil, lastError.isEmpty ? "该服务不支持克隆，或接口路径不同" : lastError)
+        return result
     }
 }
