@@ -279,6 +279,7 @@ struct SpeechModelPage: View {
 
     @State private var models: [String] = []
     @State private var voices: [String] = []
+    @State private var moodAffectsVoice = Store.shared.settings.moodAffectsVoice
     @State private var usingFallbackVoices = false
     @State private var status: String?
     @State private var voiceStatus: String?
@@ -304,10 +305,11 @@ struct SpeechModelPage: View {
                     LabeledContent("参考音频",
                                    value: "\(MiMoVoice.referenceSize() / 1024) KB · \(MiMoVoice.referenceMIME())")
                 }
+                Toggle("情绪影响朗读语气", isOn: $moodAffectsVoice)
             } header: {
                 Text("当前生效")
             } footer: {
-                Text("改动要点右上角「保存」，或者用下面克隆区的「保存并生效」。")
+                Text("改动要点右上角「保存」，或者用下面克隆区的「保存并生效」。情绪默认不影响音色；打开开关只会调语速和节奏。")
             }
 
             Section {
@@ -655,6 +657,7 @@ struct SpeechModelPage: View {
         s.ttsModel = model.trimmingCharacters(in: .whitespaces)
         s.ttsAPIKey = key.trimmingCharacters(in: .whitespaces)
         s.ttsVoice = voice.trimmingCharacters(in: .whitespaces)
+        s.moodAffectsVoice = moodAffectsVoice
         Store.shared.saveSettings(s)
     }
 }

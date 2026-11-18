@@ -343,11 +343,12 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
         // 小米 MiMo：走 chat/completions，音频在 message.audio.data
         if MiMoVoice.looksLikeMiMo(model: settings.ttsModel, base: settings.ttsBaseURL) {
-            let toward = MoodStore.shared.current.voiceStyle
             let isDesign = settings.ttsModel.lowercased().contains("voicedesign")
-            let style = isDesign
-                ? (settings.ttsVoice.isEmpty ? toward : settings.ttsVoice + "；" + toward)
-                : toward
+            // 情绪只在开关打开时生效；voicedesign 的音色由描述决定，混进情绪会换嗓子
+            let toward = (settings.moodAffectsVoice && !isDesign)
+                ? MoodStore.shared.current.voiceStyle
+                : ""
+            let style = isDesign ? settings.ttsVoice : toward
             return await MiMoVoice.synth(text: text,
                                          voice: settings.ttsVoice,
                                          style: style,

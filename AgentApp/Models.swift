@@ -95,6 +95,7 @@ struct AgentSettings: Codable, Equatable {
     var ttsModel: String = ""               // 例：tts-1 / cosyvoice-v1
     var ttsVoice: String = "alloy"
     var ttsAPIKey: String = ""              // 留空 = 复用对话模型的 key
+    var moodAffectsVoice: Bool = false      // 情绪是否影响朗读语气（默认关，避免音色漂移）
 
     /// 旧版用户可编辑的系统提示词：只用于迁移，不再参与拼装
     var systemPrompt: String = ""
@@ -148,6 +149,7 @@ struct AgentSettings: Codable, Equatable {
         ttsModel = (try? c.decodeIfPresent(String.self, forKey: .ttsModel)) ?? ttsModel
         ttsVoice = (try? c.decodeIfPresent(String.self, forKey: .ttsVoice)) ?? ttsVoice
         ttsAPIKey = (try? c.decodeIfPresent(String.self, forKey: .ttsAPIKey)) ?? ttsAPIKey
+        moodAffectsVoice = (try? c.decodeIfPresent(Bool.self, forKey: .moodAffectsVoice)) ?? moodAffectsVoice
         systemPrompt = (try? c.decodeIfPresent(String.self, forKey: .systemPrompt)) ?? systemPrompt
     }
 
