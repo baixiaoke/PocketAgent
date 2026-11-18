@@ -277,7 +277,8 @@ struct SpeechModelPage: View {
     @State private var voice = Store.shared.settings.ttsVoice
 
     @State private var models: [String] = []
-    @State private var voices: [String] = ModelCatalog.builtinVoices
+    @State private var voices: [String] = []
+    @State private var usingFallbackVoices = false
     @State private var status: String?
     @State private var voiceStatus: String?
     @State private var busy = false
@@ -332,7 +333,7 @@ struct SpeechModelPage: View {
                 Button {
                     Task { await detectVoices() }
                 } label: {
-                    Label("检测现有发音人", systemImage: "person.wave.2")
+                    Label("检测服务端发音人", systemImage: "person.wave.2")
                 }
                 .disabled(busy)
 
@@ -340,18 +341,24 @@ struct SpeechModelPage: View {
                     Text(s).font(.caption).foregroundStyle(s.hasPrefix("✅") ? .green : .orange)
                 }
 
-                Picker("当前音色", selection: $voice) {
-                    if voices.isEmpty {
-                        Text(voice.isEmpty ? "未设置" : voice).tag(voice)
+                if !voices.isEmpty {
+                    Picker(usingFallbackVoices ? "内置音色（非服务端）" : "当前音色", selection: $voice) {
+                        ForEach(voices, id: \.self) { v in
+                            Text(v).tag(v)
+                        }
                     }
-                    ForEach(voices, id: \.self) { v in
-                        Text(v).tag(v)
-                    }
+                }
+
+                if voice.isEmpty && voices.isEmpty {
+                    TextField("手动填音色名，如 alloy", text: $voice)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.callout.monospaced())
                 }
             } header: {
                 Text("发音人")
             } footer: {
-                Text("会依次尝试 /voices、/audio/voices、/voice/list；服务端没有列表接口时列出内置常用音色。")
+                Text("只认真的服务端列表。拉不到就明确告诉你不支持，再给你一份内置常用名单，但那不是「检测出来的」。")
             }
 
             Section {
@@ -434,11 +441,16 @@ struct SpeechModelPage: View {
         let (list, err) = await ModelCatalog.listVoices(base: base.isEmpty ? Store.shared.settings.baseURL : base,
                                                        apiKey: useKey)
         busy = false
-        voices = list
+
         if let e = err {
-            voiceStatus = "⚠️ \(e)"
+            // 服务端没有音色接口：给内置名单，但明确标注
+            usingFallbackVoices = true
+            voices = list
+            voiceStatus = "⚠️ \(e)（下面是内置名单，不是这个服务给你的）"
         } else {
-            voiceStatus = "✅ 服务端给出 \(list.count) 个音色"
+            usingFallbackVoices = false
+            voices = list
+            voiceStatus = "✅ 服务端返回 \(list.count) 个音色"
             if voice.isEmpty, let f = list.first { voice = f }
         }
     }
