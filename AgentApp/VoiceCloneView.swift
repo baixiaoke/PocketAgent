@@ -379,11 +379,12 @@ struct VoiceCloneView: View {
             }
 
             let model = "mimo-v2.5-tts-voiceclone"
-            let probe = await MiMoVoice.synth(text: "你好，我是青露。",
-                                             voice: "", style: voiceName,
-                                             base: base,
-                                             apiKey: apiKey,
-                                             model: model)
+            let probe = await MiMoVoice.synthWithTimeout(text: "你好，我是青露。",
+                                                         voice: "", style: voiceName,
+                                                         base: base,
+                                                         apiKey: apiKey,
+                                                         model: model,
+                                                         seconds: 45)
             if probe != nil {
                 var s = Store.shared.settings
                 s.ttsBaseURL = base

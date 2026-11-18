@@ -115,7 +115,7 @@ enum MiMoVoice {
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.timeoutInterval = 180
+        req.timeoutInterval = 45
         req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = payload
@@ -126,6 +126,32 @@ enum MiMoVoice {
 
         return parseAudio(data)
     }
+
+    /// 带硬超时的合成：超时就返回 nil，不让界面一直转圈
+    static func synthWithTimeout(text: String,
+                                 voice: String,
+                                 style: String,
+                                 base: String,
+                                 apiKey: String,
+                                 model: String,
+                                 seconds: Double = 45) async -> Data? {
+        await withTaskGroup(of: Data?.self) { group in
+            group.addTask {
+                await synth(text: text, voice: voice, style: style,
+                            base: base, apiKey: apiKey, model: model)
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                return nil
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
+    }
+
+    /// 参考音频安全上限（MiMo 的 base64 上限 10MB，原文件控制在此之下）
+    static let maxReferenceBytes = 7_000_000
 
     private static func parseAudio(_ data: Data) -> Data? {
         guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

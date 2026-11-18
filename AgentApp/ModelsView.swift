@@ -292,6 +292,7 @@ struct SpeechModelPage: View {
     @State private var audioURL: URL?
     @State private var cloneStatus: String?
     @State private var cloneLog: String = ""
+    @State private var cloneElapsed: Int = 0
     @State private var cloneFormat: ModelCatalog.CloneFormat = .generic
     @State private var cloning = false
 
@@ -468,7 +469,7 @@ struct SpeechModelPage: View {
                 } label: {
                     HStack {
                         Image(systemName: "person.crop.circle.badge.plus")
-                        Text(cloning ? "上传中…" : "上传并克隆").fontWeight(.semibold)
+                        Text(cloning ? "上传中… \(cloneElapsed)s（45 秒超时）" : "上传并克隆").fontWeight(.semibold)
                         Spacer()
                         if cloning { ProgressView() }
                     }
@@ -605,8 +606,8 @@ struct SpeechModelPage: View {
 
         // 小米 MiMo：不走 multipart 上传，参考音频直接存在本地
         if MiMoVoice.looksLikeMiMo(model: model, base: base) {
-            guard data.count > 44 else {
-                cloneStatus = "❌ 这段音频太短或读不出来"
+            guard data.count <= MiMoVoice.maxReferenceBytes else {
+                cloneStatus = "❌ 参考音频太大（\(data.count / 1024 / 1024) MB），上限 7 MB。剪短一点再试"
                 return
             }
             do {
@@ -615,11 +616,21 @@ struct SpeechModelPage: View {
                 cloneStatus = "❌ 写不进沙盒"
                 return
             }
-            let ok = await MiMoVoice.synth(text: "你好，我是青露。",
-                                           voice: "", style: cloneName,
-                                           base: base.isEmpty ? Store.shared.settings.ttsBaseURL : base,
-                                           apiKey: useKey,
-                                           model: "mimo-v2.5-tts-voiceclone")
+
+            cloneElapsed = 0
+            let timer = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    await MainActor.run { cloneElapsed += 1 }
+                }
+            }
+            let ok = await MiMoVoice.synthWithTimeout(text: "你好，我是青露。",
+                                                      voice: "", style: cloneName,
+                                                      base: base.isEmpty ? Store.shared.settings.ttsBaseURL : base,
+                                                      apiKey: useKey,
+                                                      model: "mimo-v2.5-tts-voiceclone",
+                                                      seconds: 45)
+            timer.cancel()
             cloneLog = "参考音频 \(data.count / 1024) KB 已保存"
             if ok != nil {
                 cloneStatus = "✅ 参考音频可用，克隆生效"
@@ -631,7 +642,7 @@ struct SpeechModelPage: View {
                 model = s.ttsModel
                 voice = s.ttsVoice
             } else {
-                cloneStatus = "⚠️ 已保存，但试合成没成功（检查地址 /v1、模型名）"
+                cloneStatus = "⚠️ 已保存，但试合成没成功（45 秒超时或服务端拒绝）。参考音频仍然留着，可以直接用 voiceclone 模型试听"
             }
             return
         }
