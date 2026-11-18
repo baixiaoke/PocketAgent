@@ -23,6 +23,14 @@ struct SettingsView: View {
     @State private var careEveningHour = Store.shared.settings.careEveningHour
     @State private var autoModelSwitch = Store.shared.settings.autoModelSwitch
     @State private var reasoningModel = Store.shared.settings.reasoningModel
+    @State private var imageBaseURL = Store.shared.settings.imageBaseURL
+    @State private var imageModel = Store.shared.settings.imageModel
+    @State private var imageAPIKey = Store.shared.settings.imageAPIKey
+    @State private var imageSize = Store.shared.settings.imageSize
+    @State private var ttsBaseURL = Store.shared.settings.ttsBaseURL
+    @State private var ttsModel = Store.shared.settings.ttsModel
+    @State private var ttsVoice = Store.shared.settings.ttsVoice
+    @State private var ttsAPIKey = Store.shared.settings.ttsAPIKey
 
     @State private var testing = false
     @State private var testResult: String?
@@ -48,6 +56,54 @@ struct SettingsView: View {
                     Text("模型服务（OpenAI 兼容）")
                 } footer: {
                     Text("baseURL 填到 /v1 或根路径都行，App 会自己拼 /chat/completions。Key 存在 Keychain，不进备份以外的任何地方。")
+                }
+
+                Section {
+                    TextField("https://api.openai.com/v1", text: $imageBaseURL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                        .font(.callout.monospaced())
+                    TextField("dall-e-3 / flux / seedream…", text: $imageModel)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.callout.monospaced())
+                    TextField("1024x1024", text: $imageSize)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.callout.monospaced())
+                    TextField("API Key（留空复用上面那个）", text: $imageAPIKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.callout.monospaced())
+                } header: {
+                    Text("图片生成")
+                } footer: {
+                    Text("留空 = 不启用。配好后直接说「画一张…」，生成的图会存进相册。")
+                }
+
+                Section {
+                    TextField("https://api.openai.com/v1", text: $ttsBaseURL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                        .font(.callout.monospaced())
+                    TextField("tts-1 / cosyvoice…", text: $ttsModel)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.callout.monospaced())
+                    TextField("音色，如 alloy", text: $ttsVoice)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.callout.monospaced())
+                    TextField("API Key（留空复用上面那个）", text: $ttsAPIKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.callout.monospaced())
+                } header: {
+                    Text("语音合成（TTS）")
+                } footer: {
+                    Text("留空 = 走系统本地语音：免费、离线、不用网。配了云端就用云端音色，失败自动退回本地。")
                 }
 
                 Section {
@@ -105,8 +161,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Toggle("每轮自动提炼记忆", isOn: $autoExtractMemory)
-                    Toggle("定时问候", isOn: $careEnabled)
+                    Toggle("每轮自动提炼记忆", isOn: $autoExtractMemory)                    Toggle("定时问候", isOn: $careEnabled)
                     if careEnabled {
                         Stepper("早上 \(careMorningHour):00", value: $careMorningHour, in: 5...11)
                         Stepper("晚上 \(careEveningHour):30", value: $careEveningHour, in: 18...23)
@@ -183,6 +238,14 @@ struct SettingsView: View {
         s.careEveningHour = careEveningHour
         s.autoModelSwitch = autoModelSwitch
         s.reasoningModel = reasoningModel
+        s.imageBaseURL = imageBaseURL.trimmingCharacters(in: .whitespaces)
+        s.imageModel = imageModel.trimmingCharacters(in: .whitespaces)
+        s.imageAPIKey = imageAPIKey.trimmingCharacters(in: .whitespaces)
+        s.imageSize = imageSize.trimmingCharacters(in: .whitespaces).isEmpty ? "1024x1024" : imageSize
+        s.ttsBaseURL = ttsBaseURL.trimmingCharacters(in: .whitespaces)
+        s.ttsModel = ttsModel.trimmingCharacters(in: .whitespaces)
+        s.ttsVoice = ttsVoice.trimmingCharacters(in: .whitespaces)
+        s.ttsAPIKey = ttsAPIKey.trimmingCharacters(in: .whitespaces)
         Store.shared.saveSettings(s)
         Store.shared.saveAPIKey(apiKey)
 

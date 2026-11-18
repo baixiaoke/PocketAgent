@@ -171,6 +171,82 @@
   .prow .ck{font-size:11px;flex:0 0 auto;margin-top:1px}
   .prow .rtext{flex:1}
   .psec.forb .rtext{color:#ffb3ae}
+  /* ═══ 科技感主题覆盖 ═══ */
+  :root{
+    --bg:#04060c; --panel:rgba(255,255,255,.055); --panel2:rgba(255,255,255,.09);
+    --line:rgba(56,232,255,.16); --text:#eaf6ff; --muted:#7d8ea3;
+    --accent:#38e8ff; --accent2:#8b5cf6; --tool:#38e8ff;
+    --blue:#38e8ff; --purple:#8b5cf6; --red:#ff5f6d; --green:#2ee6a8;
+  }
+  body{
+    background:
+      radial-gradient(900px 500px at 15% -10%, rgba(56,232,255,.16), transparent 60%),
+      radial-gradient(800px 500px at 85% 110%, rgba(139,92,246,.16), transparent 60%),
+      linear-gradient(180deg,#04060c,#070b14 45%,#04060c);
+    color:var(--text);
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      linear-gradient(rgba(56,232,255,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,232,255,.05) 1px, transparent 1px);
+    background-size:26px 26px;
+    mask-image:radial-gradient(circle at 50% 30%, #000 40%, transparent 85%);
+  }
+  h1{letter-spacing:.5px}
+  h1::after{content:""; display:block; width:120px; height:2px; margin-top:8px;
+    background:linear-gradient(90deg,#38e8ff,#8b5cf6,transparent); border-radius:2px}
+  .phone{
+    background:linear-gradient(180deg,#070c16,#04070d 70%,#03050a);
+    border-color:#152235;
+    box-shadow:0 0 0 1px rgba(56,232,255,.10), 0 24px 70px rgba(0,0,0,.75), 0 0 60px rgba(56,232,255,.10);
+  }
+  .statusbar{color:#cfe8f5}
+  .navbar{border-bottom:1px solid rgba(56,232,255,.14);
+    background:linear-gradient(180deg, rgba(56,232,255,.06), transparent)}
+  .navbar .title{color:#eaf6ff}
+  .icon{stroke:#9fe8ff}
+  .me .bubble{
+    background:linear-gradient(135deg,rgba(15,142,207,.95),rgba(79,70,229,.95));
+    box-shadow:0 0 18px rgba(139,92,246,.45), inset 0 0 0 .6px rgba(255,255,255,.22);
+  }
+  .ai .bubble{
+    background:rgba(255,255,255,.05);
+    border:.6px solid rgba(56,232,255,.22);
+    backdrop-filter:blur(10px);
+    box-shadow:0 0 22px rgba(56,232,255,.10);
+  }
+  .chip{color:#38e8ff; background:rgba(56,232,255,.13);
+    border:.6px solid rgba(56,232,255,.25)}
+  .toolresult{background:rgba(139,92,246,.07); border-color:rgba(139,92,246,.28); color:#b9c6d6}
+  .approval{background:rgba(255,183,77,.08); border:.6px solid rgba(255,183,77,.28); border-radius:12px}
+  .approval .t{color:#ffb74d}
+  .btn{background:rgba(255,255,255,.06); border-color:rgba(56,232,255,.22)}
+  .btn.primary{background:linear-gradient(135deg,#0f8ecf,#4f46e5); border-color:transparent;
+    box-shadow:0 0 16px rgba(56,232,255,.35)}
+  .composer{background:rgba(4,7,13,.92); border-top:1px solid rgba(56,232,255,.16)}
+  .field{background:rgba(255,255,255,.05); border:.6px solid rgba(56,232,255,.20); color:#9fb3c6}
+  .send{background:rgba(56,232,255,.14); color:#38e8ff}
+  .cell{background:rgba(255,255,255,.045); border:.6px solid rgba(56,232,255,.12)}
+  .cell .meta{color:#6f8199}
+  .group{background:rgba(255,255,255,.045); border:.6px solid rgba(56,232,255,.10)}
+  .frow{border-bottom-color:rgba(56,232,255,.10)}
+  .val{color:#9fe8ff}
+  .toggle{background:rgba(255,255,255,.14)}
+  .toggle.on{background:linear-gradient(135deg,#2ee6a8,#38e8ff)}
+  .psec{background:rgba(255,255,255,.045); border:.6px solid rgba(56,232,255,.10)}
+  .psec.forb{background:rgba(255,95,109,.07); border-color:rgba(255,95,109,.22)}
+  .phead{border-bottom-color:rgba(56,232,255,.10)}
+  .prow{border-bottom-color:rgba(56,232,255,.06)}
+  .avatar{background:linear-gradient(135deg,#38e8ff,#8b5cf6);
+    box-shadow:0 0 0 12px rgba(56,232,255,.10), 0 0 40px rgba(139,92,246,.45)}
+  .call{background:radial-gradient(120% 80% at 50% 0%,#0d2033 0%,#060a12 55%,#03050a 100%)}
+  .cbtn{background:rgba(255,255,255,.12); backdrop-filter:blur(6px)}
+  .cbtn.mic{background:linear-gradient(135deg,#0f8ecf,#38e8ff); box-shadow:0 0 22px rgba(56,232,255,.5)}
+  .cbtn.hang{background:linear-gradient(135deg,#ff3b52,#ff5f6d); box-shadow:0 0 22px rgba(255,95,109,.45)}
+  .note{color:#6f8199}
+  .label{color:#7d8ea3; letter-spacing:.4px}
+  .sub{color:#7d8ea3}
 </style>
 </head>
 <body>

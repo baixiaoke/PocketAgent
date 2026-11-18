@@ -308,11 +308,12 @@ struct CallView: View {
         localLines.append(reply)
         if rt.settings.companionMode || rt.settings.autoSpeak {
             voice.rate = Float(rt.settings.speechRate)
-            voice.speak(reply)
+            let settings = rt.settings
+            Task { await voice.speakSmart(reply, settings: settings, fallbackKey: Store.shared.apiKey) }
             // 念完再继续听
             Task {
                 var waited = 0.0
-                while voice.isSpeaking && waited < 40 {
+                while voice.isSpeaking && waited < 60 {
                     try? await Task.sleep(nanoseconds: 300_000_000)
                     waited += 0.3
                 }

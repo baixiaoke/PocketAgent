@@ -23,6 +23,8 @@ struct ChatMessage: Codable, Identifiable, Hashable {
     var toolCallID: String? = nil
     /// 只用于 UI 展示，不进请求体
     var toolName: String? = nil
+    /// 生成的图片（相对 Documents 的路径），只用于 UI
+    var imagePath: String? = nil
     var createdAt: Date = Date()
 
     static func system(_ s: String) -> ChatMessage { .init(role: .system, content: s) }
@@ -79,6 +81,18 @@ struct AgentSettings: Codable, Equatable {
     var autoModelSwitch: Bool = false       // 长问题自动用推理模型
     var reasoningModel: String = "deepseek-reasoner"
 
+    // 图片生成（OpenAI 兼容 /images/generations）
+    var imageBaseURL: String = ""           // 留空 = 不启用
+    var imageModel: String = ""             // 例：dall-e-3 / flux.1-schnell / seedream-3
+    var imageAPIKey: String = ""            // 留空 = 复用对话模型的 key
+    var imageSize: String = "1024x1024"
+
+    // 语音合成（OpenAI 兼容 /audio/speech）；留空则用系统本地语音
+    var ttsBaseURL: String = ""
+    var ttsModel: String = ""               // 例：tts-1 / cosyvoice-v1
+    var ttsVoice: String = "alloy"
+    var ttsAPIKey: String = ""              // 留空 = 复用对话模型的 key
+
     var systemPrompt: String = """
     你是运行在这台 iPhone 上的独立 agent。
     你能直接操作这台设备的原生能力：读写 App 沙盒里的文件、读取用户授权的外部文件夹、抓网页、剪贴板、打开链接、发通知、建提醒事项。
@@ -116,6 +130,14 @@ struct AgentSettings: Codable, Equatable {
         careEveningHour = (try? c.decodeIfPresent(Int.self, forKey: .careEveningHour)) ?? careEveningHour
         autoModelSwitch = (try? c.decodeIfPresent(Bool.self, forKey: .autoModelSwitch)) ?? autoModelSwitch
         reasoningModel = (try? c.decodeIfPresent(String.self, forKey: .reasoningModel)) ?? reasoningModel
+        imageBaseURL = (try? c.decodeIfPresent(String.self, forKey: .imageBaseURL)) ?? imageBaseURL
+        imageModel = (try? c.decodeIfPresent(String.self, forKey: .imageModel)) ?? imageModel
+        imageAPIKey = (try? c.decodeIfPresent(String.self, forKey: .imageAPIKey)) ?? imageAPIKey
+        imageSize = (try? c.decodeIfPresent(String.self, forKey: .imageSize)) ?? imageSize
+        ttsBaseURL = (try? c.decodeIfPresent(String.self, forKey: .ttsBaseURL)) ?? ttsBaseURL
+        ttsModel = (try? c.decodeIfPresent(String.self, forKey: .ttsModel)) ?? ttsModel
+        ttsVoice = (try? c.decodeIfPresent(String.self, forKey: .ttsVoice)) ?? ttsVoice
+        ttsAPIKey = (try? c.decodeIfPresent(String.self, forKey: .ttsAPIKey)) ?? ttsAPIKey
         systemPrompt = (try? c.decodeIfPresent(String.self, forKey: .systemPrompt)) ?? systemPrompt
     }
 

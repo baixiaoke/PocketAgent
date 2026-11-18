@@ -21,21 +21,27 @@ struct ChatView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                transcript
-                if let status = rt.statusLine.isEmpty ? nil : rt.statusLine {
-                    statusBar(status)
+            ZStack {
+                TechBackground()
+                VStack(spacing: 0) {
+                    transcript
+                    if let status = rt.statusLine.isEmpty ? nil : rt.statusLine {
+                        statusBar(status)
+                    }
+                    if let err = rt.errorText {
+                        errorBanner(err)
+                    }
+                    if let pending = rt.pendingApproval {
+                        approvalCard(pending)
+                    }
+                    inputBar
                 }
-                if let err = rt.errorText {
-                    errorBanner(err)
-                }
-                if let pending = rt.pendingApproval {
-                    approvalCard(pending)
-                }
-                inputBar
             }
             .navigationTitle(rt.current.title)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     HStack(spacing: 14) {
@@ -214,7 +220,11 @@ struct ChatView: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(focused ? Theme.cyan.opacity(0.55) : Color.white.opacity(0.08), lineWidth: 0.8)
+                )
                 .focused($focused)
                 .disabled(rt.isRunning)
 
@@ -224,7 +234,8 @@ struct ChatView: View {
                 } label: {
                     Image(systemName: "stop.circle.fill")
                         .font(.system(size: 30))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Theme.danger)
+                        .neonGlow(Theme.danger, radius: 8, opacity: 0.6)
                 }
             } else {
                 Button {
@@ -232,7 +243,8 @@ struct ChatView: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 30))
-                        .foregroundStyle(draft.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue)
+                        .foregroundStyle(draft.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : Theme.cyan)
+                        .neonGlow(Theme.cyan, radius: 8, opacity: 0.7)
                 }
                 .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
             }
@@ -240,7 +252,8 @@ struct ChatView: View {
         .padding(.horizontal, 12)
         .padding(.top, 8)
         .padding(.bottom, 8)
-        .background(.bar)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) { PulseBar().opacity(0.7) }
     }
 
     private func submit() {
@@ -270,8 +283,13 @@ struct MessageRow: View {
                 Text(message.content)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(Color.blue.opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
+                    .background(Theme.userBubble, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 0.6)
+                    )
                     .foregroundStyle(.white)
+                    .neonGlow(Theme.violet, radius: 10, opacity: 0.35)
                     .textSelection(.enabled)
             }
 
@@ -281,7 +299,7 @@ struct MessageRow: View {
                     MarkdownText(text: message.content)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
+                        .glassCard(radius: 16, tint: Theme.cyan)
                         .textSelection(.enabled)
                 }
                 if let calls = message.toolCalls, !calls.isEmpty {
@@ -299,7 +317,22 @@ struct MessageRow: View {
             }
 
         case .tool:
-            ToolRow(message: message)
+            VStack(alignment: .leading, spacing: 8) {
+                if let p = message.imagePath,
+                   let ui = UIImage(contentsOfFile: ImageGen.absolutePath(p).path) {
+                    Image(uiImage: ui)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 262)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Theme.cyan.opacity(0.35), lineWidth: 0.8)
+                        )
+                        .neonGlow(Theme.cyan, radius: 12, opacity: 0.3)
+                }
+                ToolRow(message: message)
+            }
 
         case .system:
             EmptyView()
@@ -331,7 +364,7 @@ struct ToolRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color(uiColor: .tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+        .glassCard(radius: 12, tint: Theme.violet)
         .accentColor(.gray)
     }
 }

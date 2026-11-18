@@ -102,6 +102,10 @@ final class ToolRegistry {
                      description: "在本地知识库里检索用户文档的片段。问「我那份文件里怎么写的」时用它。",
                      parameters: obj(["query": str("要查的内容"), "limit": num("返回几条，默认 5")],
                                      required: ["query"])),
+
+            ToolSpec(name: "generate_image",
+                     description: "根据描述生成一张图片（需先配好图片模型）。会保存到 App 并存入相册。",
+                     parameters: obj(["prompt": str("画面描述，越具体越好")], required: ["prompt"])),
         ]
     }
 
@@ -313,6 +317,20 @@ final class ToolRegistry {
                     out += "[\(i + 1)] \(h.path)\n\(h.text.prefix(600))\n\n"
                 }
                 return (out, false)
+
+            case "generate_image":
+                let prompt = args["prompt"] as? String ?? ""
+                guard !prompt.trimmingCharacters(in: .whitespaces).isEmpty else {
+                    return ("描述不能为空", true)
+                }
+                do {
+                    let path = try await ImageGen.generate(prompt: prompt,
+                                                           settings: Store.shared.settings,
+                                                           fallbackKey: Store.shared.apiKey)
+                    return ("IMAGE:" + path + "\n已生成图片，并存进相册。", false)
+                } catch {
+                    return ("生成失败：\(error.localizedDescription)", true)
+                }
 
             default:
                 return ("没有这个工具：\(name)", true)

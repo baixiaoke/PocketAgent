@@ -169,6 +169,7 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var isSpeaking = false
 
     private let synth = AVSpeechSynthesizer()
+    private var player: AVAudioPlayer?
     var rate: Float = 0.48
     var voiceIdentifier: String?
 
@@ -192,7 +193,72 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
     func stop() {
         if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+        player?.stop()
+        player = nil
         isSpeaking = false
+    }
+
+    // MARK: - 云端 TTS（配了就走云端，没配就走系统语音）
+    func speakSmart(_ text: String, settings: AgentSettings, fallbackKey: String) async {
+        let clean = Self.stripMarkdown(text)
+        guard !clean.isEmpty else { return }
+
+        if !settings.ttsBaseURL.isEmpty, !settings.ttsModel.isEmpty {
+            if let data = await Self.fetchSpeech(clean, settings: settings, fallbackKey: fallbackKey) {
+                stop()
+                do {
+                    let session = AVAudioSession.sharedInstance()
+                    try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+                    try session.setActive(true)
+                    let p = try AVAudioPlayer(data: data)
+                    player = p
+                    p.play()
+                    isSpeaking = true
+                    Task { @MainActor in
+                        while let cur = self.player, cur.isPlaying {
+                            try? await Task.sleep(nanoseconds: 200_000_000)
+                        }
+                        self.isSpeaking = false
+                    }
+                    return
+                } catch {
+                    // 云端播放失败，退回本地
+                }
+            }
+        }
+        speak(clean)
+    }
+
+    /// 调 OpenAI 兼容的 /audio/speech，返回音频数据
+    static func fetchSpeech(_ text: String,
+                            settings: AgentSettings,
+                            fallbackKey: String) async -> Data? {
+        var base = settings.ttsBaseURL.trimmingCharacters(in: .whitespaces)
+        while base.hasSuffix("/") { base.removeLast() }
+        if !base.hasSuffix("/audio/speech") { base += "/audio/speech" }
+        guard let url = URL(string: base) else { return nil }
+
+        let key = settings.ttsAPIKey.isEmpty ? fallbackKey : settings.ttsAPIKey
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 60
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+
+        let body: [String: Any] = [
+            "model": settings.ttsModel,
+            "input": String(text.prefix(2000)),
+            "voice": settings.ttsVoice.isEmpty ? "alloy" : settings.ttsVoice,
+            "response_format": "mp3"
+        ]
+        guard let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
+        req.httpBody = payload
+
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              let http = resp as? HTTPURLResponse,
+              (200..<300).contains(http.statusCode),
+              !data.isEmpty else { return nil }
+        return data
     }
 
     nonisolated func speechSynthesizer(_ s: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {

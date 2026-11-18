@@ -179,7 +179,14 @@ final class AgentRuntime: ObservableObject {
                     argumentsJSON: call.function.arguments
                 )
                 let body = isError ? "【错误】" + content : content
-                current.messages.append(.tool(body, id: call.id, name: call.function.name))
+                var msg = ChatMessage.tool(body, id: call.id, name: call.function.name)
+                if body.hasPrefix("IMAGE:") {
+                    let parts = body.components(separatedBy: "\n")
+                    let path = String(parts.first ?? "").replacingOccurrences(of: "IMAGE:", with: "")
+                    msg.imagePath = path
+                    msg.content = parts.count > 1 ? parts.dropFirst().joined(separator: "\n") : "已生成图片"
+                }
+                current.messages.append(msg)
             }
         }
 
