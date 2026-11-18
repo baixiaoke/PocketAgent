@@ -30,6 +30,23 @@ struct MoodState: Codable, Equatable {
         return s
     }
 
+    /// 语音风格：把情绪翻译成 TTS 的 style 指令
+    var voiceStyle: String {
+        var parts: [String] = []
+        if valence < 0.35 {
+            parts.append("语气低落、放轻声音，语速偏慢")
+        } else if valence > 0.75 {
+            parts.append("语气轻快上扬，带笑意")
+        }
+        if energy < 0.3 {
+            parts.append("听起来有点累，句子之间多停顿")
+        } else if energy > 0.8 {
+            parts.append("有精神，语速稍快")
+        }
+        if parts.isEmpty { parts.append("自然、平稳、娓娓道来") }
+        return parts.joined(separator: "，")
+    }
+
     /// 行为倾向：把数值翻译成说话方式
     var behavior: String {
         var lines: [String] = []

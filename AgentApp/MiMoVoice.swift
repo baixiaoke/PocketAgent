@@ -50,7 +50,8 @@ enum MiMoVoice {
     // MARK: - 合成
     /// text: 要念的文本；instruction: 音色描述（voicedesign 用）
     static func synth(text: String,
-                      instruction: String,
+                      voice: String,
+                      style: String,
                       base: String,
                       apiKey: String,
                       model: String) async -> Data? {
@@ -65,11 +66,11 @@ enum MiMoVoice {
 
         var messages: [[String: String]] = [["role": "assistant", "content": text]]
         if isDesign {
-            // voicedesign：user 必填，写音色描述
-            messages.insert(["role": "user", "content": instruction.isEmpty ? "自然、清楚的中文女声" : instruction], at: 0)
-        } else if !instruction.isEmpty {
-            // 内置音色 / 克隆：user 可选，当风格指令用
-            messages.insert(["role": "user", "content": instruction], at: 0)
+            // voicedesign：user 必填，写音色描述（voice 字段放描述）
+            messages.insert(["role": "user", "content": style.isEmpty ? (voice.isEmpty ? "自然、清楚的中文女声" : voice) : style], at: 0)
+        } else if !style.isEmpty {
+            // 内置音色 / 克隆：user 当风格指令
+            messages.insert(["role": "user", "content": style], at: 0)
         }
 
         var audioField: [String: Any] = ["format": "wav"]
@@ -78,7 +79,7 @@ enum MiMoVoice {
             audioField["voice"] = ref
         } else if !isDesign {
             // 内置音色：voice 传音色 id
-            let v = instruction.trimmingCharacters(in: .whitespaces)
+            let v = voice.trimmingCharacters(in: .whitespaces)
             audioField["voice"] = v.isEmpty ? "mimo_default" : v
         }
 

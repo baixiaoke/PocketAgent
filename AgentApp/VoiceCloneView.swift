@@ -380,7 +380,7 @@ struct VoiceCloneView: View {
 
             let model = "mimo-v2.5-tts-voiceclone"
             let probe = await MiMoVoice.synth(text: "你好，我是青露。",
-                                             instruction: voiceName,
+                                             voice: "", style: voiceName,
                                              base: base,
                                              apiKey: apiKey,
                                              model: model)

@@ -571,7 +571,7 @@ struct SpeechModelPage: View {
                 return
             }
             let ok = await MiMoVoice.synth(text: "你好，我是青露。",
-                                           instruction: cloneName,
+                                           voice: "", style: cloneName,
                                            base: base.isEmpty ? Store.shared.settings.ttsBaseURL : base,
                                            apiKey: useKey,
                                            model: "mimo-v2.5-tts-voiceclone")
