@@ -188,19 +188,6 @@ struct ImageModelPage: View {
 
     var body: some View {
         Form {
-            Section {
-                LabeledContent("地址", value: base.isEmpty ? "未设" : base)
-                LabeledContent("模型", value: model.isEmpty ? "未设（走本地语音）" : model)
-                LabeledContent("音色", value: voice.isEmpty ? "未设" : voice)
-                if MiMoVoice.hasReference() {
-                    LabeledContent("参考音频",
-                                   value: "\(MiMoVoice.referenceSize() / 1024) KB · \(MiMoVoice.referenceMIME())")
-                }
-            } header: {
-                Text("当前生效")
-            } footer: {
-                Text("改动要点右上角「保存」，或者用下面克隆区的「保存并生效」。")
-            }
 
             Section {
                 TextField("https://api.openai.com/v1", text: $base)
