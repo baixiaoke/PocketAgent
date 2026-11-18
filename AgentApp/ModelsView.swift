@@ -377,6 +377,26 @@ struct SpeechModelPage: View {
             }
 
             Section {
+                NavigationLink {
+                    VoiceCloneView(base: base.isEmpty ? Store.shared.settings.baseURL : base,
+                                   apiKey: useKey,
+                                   onCloned: { id in
+                                       voice = id
+                                       save()
+                                   })
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "mic.badge.plus")
+                            .foregroundStyle(Theme.cyan)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("跟着念，现场录一段")
+                            Text("分 5 段引导录音，识别校验后自动合并提交")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 TextField("克隆音色名字（如：我的声音）", text: $cloneName)
                 Button {
                     showAudioPicker = true
