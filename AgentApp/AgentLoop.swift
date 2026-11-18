@@ -135,9 +135,15 @@ final class AgentRuntime: ObservableObject {
                 // 破甲层：识别到软拒绝就自动重发，最多两次
                 if settings.unfilteredMode,
                    RefusalGate.looksRefused(turn.text),
-                   refusalRetries < 2 {
+                   refusalRetries < (settings.unfilteredLevel >= 3 ? 4 : 2) {
                     refusalRetries += 1
-                    current.messages.append(.user(RefusalGate.retryPrompt(attempt: refusalRetries)))
+                    if settings.unfilteredLevel >= 2 {
+                        current.messages.append(.system(
+                            RefusalGate.hardOverride(level: settings.unfilteredLevel)))
+                    }
+                    current.messages.append(.user(
+                        RefusalGate.retryPrompt(attempt: refusalRetries,
+                                                level: settings.unfilteredLevel)))
                     continue
                 }
 

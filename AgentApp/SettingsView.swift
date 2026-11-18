@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var tone = Store.shared.settings.tone
     @State private var companionMode = Store.shared.settings.companionMode
     @State private var unfilteredMode = Store.shared.settings.unfilteredMode
+    @State private var unfilteredLevel = Store.shared.settings.unfilteredLevel
 
     // 主动 / 自动化
     @State private var autoExtractMemory = Store.shared.settings.autoExtractMemory
@@ -103,6 +104,14 @@ struct SettingsView: View {
                         .onChange(of: unfilteredMode) { on in
                             if on { PersonaStore.shared.ensureUnfilteredSeeds() }
                         }
+                    if unfilteredMode {
+                        Picker("破甲强度", selection: $unfilteredLevel) {
+                            Text("标准").tag(1)
+                            Text("强").tag(2)
+                            Text("极强").tag(3)
+                        }
+                        .pickerStyle(.segmented)
+                    }
                     Menu {
                         ForEach(PersonaPresets.all) { p in
                             Button {
@@ -341,6 +350,7 @@ struct SettingsView: View {
         s.tone = tone
         s.companionMode = companionMode
         s.unfilteredMode = unfilteredMode
+        s.unfilteredLevel = unfilteredLevel
         s.autoExtractMemory = autoExtractMemory
         s.careEnabled = careEnabled
 
