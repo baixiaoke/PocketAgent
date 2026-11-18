@@ -1,0 +1,86 @@
+# 在 GitHub 的 macOS runner 上编出 ipa / tipa —— 全程不需要你有一台 Mac。
+#
+# 前提：这个仓库的根目录 = ios-agent 目录的内容（project.yml 和 AgentApp/ 都在根上）。
+#
+# 产出两个文件：
+#   · PocketAgent.tipa           ← 已 ad-hoc 签名，TrollStore 点一下直接装（iOS ≤16.6.1 / 17.0）
+#   · PocketAgent-unsigned.ipa   ← 完全未签名，给 AltStore / SideStore 用（7 天续签）
+#
+# 用法：推到 GitHub → Actions → build-ipa → Run workflow → 跑完在 Artifacts 里下载。
+
+name: build-ipa
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 XcodeGen 和 ldid
+        run: |
+          brew install xcodegen
+          brew install ldid || echo "ldid 装失败，后面会用未签名包兜底"
+
+      - name: 生成 Xcode 工程
+        run: |
+          xcodegen generate
+          ls -la
+
+      - name: 编译（不签名）
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project PocketAgent.xcodeproj \
+            -scheme PocketAgent \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath build/PocketAgent.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=NO
+
+      - name: 组装未签名 ipa（给 AltStore）
+        run: |
+          set -e
+          mkdir -p build/Payload
+          cp -R build/PocketAgent.xcarchive/Products/Applications/PocketAgent.app build/Payload/
+          cd build
+          zip -qry PocketAgent-unsigned.ipa Payload
+          ls -lh PocketAgent-unsigned.ipa
+
+      - name: ad-hoc 签名并打成 tipa（给 TrollStore）
+        run: |
+          set -e
+          APP="build/PocketAgent.xcarchive/Products/Applications/PocketAgent.app"
+          if command -v ldid >/dev/null 2>&1; then
+            echo "用 ldid 做 ad-hoc 签名"
+            ldid -S "$APP/PocketAgent" || echo "ldid -S 失败，保留未签名"
+          else
+            echo "没有 ldid，跳过签名"
+          fi
+          # 清掉 _CodeSignature，避免残留的旧签名干扰 TrollStore
+          rm -rf "$APP/_CodeSignature" || true
+          mkdir -p build-ts/Payload
+          cp -R "$APP" build-ts/Payload/
+          cd build-ts
+          zip -qry ../build/PocketAgent.tipa Payload
+          cd ..
+          ls -lh build/PocketAgent.tipa
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: PocketAgent-ipa
+          path: |
+            build/PocketAgent.tipa
+            build/PocketAgent-unsigned.ipa
+          retention-days: 30

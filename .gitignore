@@ -1,0 +1,7 @@
+*.log
+*.log.err
+.DS_Store
+build/
+build-ts/
+Payload/
+_check.js
