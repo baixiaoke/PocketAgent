@@ -393,6 +393,9 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     /// 念之前先去掉 Markdown 标记，否则会把星号和井号念出来
     static func stripMarkdown(_ text: String) -> String {
         var t = text
+        // 气泡分隔符不能让 TTS 看到：很多引擎把 | 当格式标记，读到就停
+        t = t.replacingOccurrences(of: "|||", with: "。")
+        t = t.replacingOccurrences(of: "|", with: "")
         t = t.replacingOccurrences(of: "```", with: " 代码块 ")
         for token in ["**", "##", "###", "`", "> ", "- "] {
             t = t.replacingOccurrences(of: token, with: "")
