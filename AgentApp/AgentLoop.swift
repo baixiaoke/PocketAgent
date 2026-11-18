@@ -11,12 +11,19 @@ final class AgentRuntime: ObservableObject {
     @Published var isRunning = false
     @Published var statusLine: String = ""
     @Published var errorText: String?
+    /// 危险工具待确认
+    @Published var pendingApproval: PendingApproval?
+    /// 最后一条助手回复（给语音朗读用）
+    @Published var lastAssistantText: String = ""
+
+    var settings: AgentSettings { store.settings }
 
     private let client = LLMClient()
     private let tools: ToolRegistry
     private let store = Store.shared
     private var bgTask: UIBackgroundTaskIdentifier = .invalid
     private var runTask: Task<Void, Never>?
+    private var approvalContinuation: CheckedContinuation<Bool, Never>?
 
     /// 送进模型的历史上限（条），防止上下文无限膨胀
     private let historyLimit = 60
@@ -114,6 +121,8 @@ final class AgentRuntime: ObservableObject {
             if turn.toolCalls.isEmpty {
                 if turn.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     current.messages[idx].content = "（模型返回了空内容）"
+                } else {
+                    lastAssistantText = turn.text
                 }
                 return
             }
@@ -121,6 +130,17 @@ final class AgentRuntime: ObservableObject {
             // 逐个执行工具
             for call in turn.toolCalls {
                 if Task.isCancelled { return }
+
+                // 危险操作先问一句（语音场景下可以直接说「确认」）
+                if ApprovalPolicy.isRisky(call.function.name), store.settings.requireApproval {
+                    let ok = await askApproval(tool: call.function.name, args: call.function.arguments)
+                    if !ok {
+                        current.messages.append(
+                            .tool("用户拒绝了这次操作。", id: call.id, name: call.function.name))
+                        continue
+                    }
+                }
+
                 statusLine = "运行 \(call.function.name)…"
                 let (content, isError) = await tools.run(
                     name: call.function.name,
@@ -159,11 +179,26 @@ final class AgentRuntime: ObservableObject {
         persist()
     }
 
-    /// 系统提示词每次现拼，不进会话存储
+    /// 系统提示词每次现拼（人设 + 记忆），不进会话存储
     private func trimmedHistory(_ messages: [ChatMessage]) -> [ChatMessage] {
         var body = messages.filter { $0.role != .system }
         if body.count > historyLimit { body = Array(body.suffix(historyLimit)) }
-        return [.system(store.settings.systemPrompt)] + body
+        return [.system(store.settings.composedPrompt())] + body
+    }
+
+    // MARK: - 工具审批
+    private func askApproval(tool: String, args: String) async -> Bool {
+        await withCheckedContinuation { (c: CheckedContinuation<Bool, Never>) in
+            approvalContinuation = c
+            pendingApproval = PendingApproval(tool: tool, args: args)
+        }
+    }
+
+    func resolveApproval(_ approved: Bool) {
+        pendingApproval = nil
+        let c = approvalContinuation
+        approvalContinuation = nil
+        c?.resume(returning: approved)
     }
 
     private func persist() {
@@ -189,4 +224,38 @@ final class AgentRuntime: ObservableObject {
         UIApplication.shared.endBackgroundTask(bgTask)
         bgTask = .invalid
     }
+}
+
+
+// MARK: - 工具审批
+
+struct PendingApproval: Identifiable {
+    let id = UUID()
+    let tool: String
+    let args: String
+
+    /// 给用户看的一句话摘要
+    var summary: String {
+        switch tool {
+        case "write_file":   return "要写文件：\(short("path"))"
+        case "add_reminder": return "要建提醒：\(short("title"))"
+        case "open_url":     return "要打开链接：\(short("url"))"
+        case "notify":       return "要发通知：\(short("title"))"
+        default:             return "要执行 \(tool)"
+        }
+    }
+
+    private func short(_ key: String) -> String {
+        guard let data = args.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let v = obj[key] as? String else { return args.prefix(60).description }
+        return String(v.prefix(60))
+    }
+}
+
+enum ApprovalPolicy {
+    /// 会改动设备状态或对外发东西的工具
+    static let risky: Set<String> = ["write_file", "add_reminder", "open_url", "notify"]
+
+    static func isRisky(_ name: String) -> Bool { risky.contains(name) }
 }

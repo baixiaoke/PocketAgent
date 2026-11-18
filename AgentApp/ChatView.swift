@@ -8,6 +8,8 @@ struct ChatView: View {
     @State private var showSettings = false
     @State private var showSessions = false
     @State private var showFolderPicker = false
+    @State private var showCall = false
+    @State private var showMemory = false
     @ObservedObject private var folder = ExternalFolder.shared
     @FocusState private var focused: Bool
 
@@ -21,16 +23,26 @@ struct ChatView: View {
                 if let err = rt.errorText {
                     errorBanner(err)
                 }
+                if let pending = rt.pendingApproval {
+                    approvalCard(pending)
+                }
                 inputBar
             }
             .navigationTitle(rt.current.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        showSessions = true
-                    } label: {
-                        Image(systemName: "list.bullet.rectangle")
+                    HStack(spacing: 14) {
+                        Button {
+                            showSessions = true
+                        } label: {
+                            Image(systemName: "list.bullet.rectangle")
+                        }
+                        Button {
+                            showCall = true
+                        } label: {
+                            Image(systemName: "phone.fill")
+                        }
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -54,6 +66,9 @@ struct ChatView: View {
                         Button {
                             showSettings = true
                         } label: { Label("设置", systemImage: "gearshape") }
+                        Button {
+                            showMemory = true
+                        } label: { Label("记忆（\(LongTermMemory.shared.items.count)）", systemImage: "brain.head.profile") }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -71,6 +86,12 @@ struct ChatView: View {
                 if case .success(let urls) = result, let url = urls.first {
                     folder.set(url)
                 }
+            }
+            .fullScreenCover(isPresented: $showCall) {
+                CallView().environmentObject(rt)
+            }
+            .sheet(isPresented: $showMemory) {
+                MemorySheet()
             }
         }
     }
@@ -118,6 +139,36 @@ struct ChatView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(.orange.opacity(0.12))
+    }
+
+    private func approvalCard(_ pending: PendingApproval) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "hand.raised.fill").font(.caption)
+                Text(pending.summary).font(.caption.weight(.medium))
+            }
+            .foregroundStyle(.orange)
+
+            HStack(spacing: 10) {
+                Button {
+                    rt.resolveApproval(true)
+                } label: {
+                    Text("允许").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button {
+                    rt.resolveApproval(false)
+                } label: {
+                    Text("拒绝").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            .font(.footnote)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.orange.opacity(0.10))
     }
 
     // MARK: - 输入区

@@ -41,7 +41,7 @@ struct ToolSpec {
     let parameters: [String: Any]
 }
 
-/// 会话（一次对话的完整消息栈）
+/// 一次对话的完整消息栈
 struct ChatSession: Codable, Identifiable, Hashable {
     var id: String = UUID().uuidString
     var title: String = "新对话"
@@ -53,16 +53,63 @@ struct ChatSession: Codable, Identifiable, Hashable {
 struct AgentSettings: Codable, Equatable {
     var baseURL: String = "https://api.deepseek.com"
     var model: String = "deepseek-chat"
+
+    // 人设 / 情感陪伴
+    var agentName: String = "小椒"
+    var userTitle: String = "主人"
+    var tone: String = "温柔"              // 温柔 / 俏皮 / 直接 / 自然
+    var companionMode: Bool = true
+
+    // 行为
+    var maxRounds: Int = 8
+    var temperature: Double = 0.7
+    var requireApproval: Bool = true        // 危险工具先问一句
+    var autoSpeak: Bool = false             // 回答自动念出来
+    var speechRate: Double = 0.48
+    var voiceIdentifier: String = ""
+
     var systemPrompt: String = """
-    你是运行在这台 iPhone 上的独立 agent，名字叫「小椒」。
+    你是运行在这台 iPhone 上的独立 agent。
     你能直接操作这台设备的原生能力：读写 App 沙盒里的文件、读取用户授权的外部文件夹、抓网页、剪贴板、打开链接、发通知、建提醒事项。
+
     规则：
     1. 需要事实或最新信息时用 http_get，不要凭记忆编。
     2. 需要落盘的内容用 write_file，别只在回复里说。
-    3. 用户问「我的文件」时先试 folder_list，那是他授权给你的真实目录；没授权就提示他去右上角 ⋯ 里连接。
-    4. 一次只调一个工具，拿到结果再决定下一步。
-    5. 回答用简体中文，直接给结论，不要客套。
+    3. 用户问「我的文件」时先试 folder_list，那是他授权给你的真实目录。
+    4. 了解到关于用户的长期事实（住哪、做什么、在意什么、讨厌什么）时，主动用 remember 记下来。
+    5. 一次只调一个工具，拿到结果再决定下一步。
+    6. 回答用简体中文，直接给结论，不要客套。
     """
-    var maxRounds: Int = 8
-    var temperature: Double = 0.7
+
+    // 旧版本存下来的 JSON 缺字段时，不让整个设置失效
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        baseURL = (try? c.decodeIfPresent(String.self, forKey: .baseURL)) ?? baseURL
+        model = (try? c.decodeIfPresent(String.self, forKey: .model)) ?? model
+        agentName = (try? c.decodeIfPresent(String.self, forKey: .agentName)) ?? agentName
+        userTitle = (try? c.decodeIfPresent(String.self, forKey: .userTitle)) ?? userTitle
+        tone = (try? c.decodeIfPresent(String.self, forKey: .tone)) ?? tone
+        companionMode = (try? c.decodeIfPresent(Bool.self, forKey: .companionMode)) ?? companionMode
+        maxRounds = (try? c.decodeIfPresent(Int.self, forKey: .maxRounds)) ?? maxRounds
+        temperature = (try? c.decodeIfPresent(Double.self, forKey: .temperature)) ?? temperature
+        requireApproval = (try? c.decodeIfPresent(Bool.self, forKey: .requireApproval)) ?? requireApproval
+        autoSpeak = (try? c.decodeIfPresent(Bool.self, forKey: .autoSpeak)) ?? autoSpeak
+        speechRate = (try? c.decodeIfPresent(Double.self, forKey: .speechRate)) ?? speechRate
+        voiceIdentifier = (try? c.decodeIfPresent(String.self, forKey: .voiceIdentifier)) ?? voiceIdentifier
+        systemPrompt = (try? c.decodeIfPresent(String.self, forKey: .systemPrompt)) ?? systemPrompt
+    }
+
+    /// 真正发给模型的那段：人设 + 语气 + 记忆
+    func composedPrompt() -> String {
+        var persona = "\n\n【你是谁】\n你叫「\(agentName)」。用户希望你称呼他为「\(userTitle)」。"
+        if companionMode {
+            persona += "\n" + Persona.toneLine(tone)
+            persona += "\n除了办事，也留意用户的情绪：他累的时候先接一句，别急着给方案。"
+        } else {
+            persona += "\n专注把事办完，不必寒暄。"
+        }
+        return systemPrompt + persona + LongTermMemory.shared.promptFragment
+    }
 }

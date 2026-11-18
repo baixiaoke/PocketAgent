@@ -71,6 +71,16 @@ final class ToolRegistry {
             ToolSpec(name: "folder_read",
                      description: "读取用户已授权的外部文件夹里的文本文件（最多 20000 字符）。",
                      parameters: obj(["path": str("相对该文件夹的文件路径")], required: ["path"])),
+
+            ToolSpec(name: "remember",
+                     description: "把一条关于用户的长期事实写进记忆（住哪、做什么、在意什么、讨厌什么、约定）。下一轮对话会自动带上。",
+                     parameters: obj(["fact": str("一句话事实，例如「他在杭州，养了一只橘猫」"),
+                                      "importance": num("1 普通 / 2 重要 / 3 别忘，默认 1")],
+                                     required: ["fact"])),
+
+            ToolSpec(name: "recall",
+                     description: "在长期记忆里检索。用户问「你还记得…」时先调它。",
+                     parameters: obj(["query": str("关键词，可为空表示看全部")], required: [])),
         ]
     }
 
@@ -200,6 +210,22 @@ final class ToolRegistry {
                     return ("读不到：\(url.lastPathComponent)", true)
                 }
                 return (String(text.prefix(20_000)), false)
+
+            case "remember":
+                let fact = args["fact"] as? String ?? ""
+                let imp = (args["importance"] as? Int) ?? 1
+                guard !fact.trimmingCharacters(in: .whitespaces).isEmpty else {
+                    return ("事实不能为空", true)
+                }
+                let added = LongTermMemory.shared.add(fact, importance: imp)
+                return (added ? "记住了：\(fact)" : "这条已经记过了", false)
+
+            case "recall":
+                let q = args["query"] as? String ?? ""
+                let hits = LongTermMemory.shared.search(q)
+                if hits.isEmpty { return ("没有相关记忆。", false) }
+                let lines = hits.map { "- \($0.text)（\($0.when)）" }
+                return ("记得这些：\n" + lines.joined(separator: "\n"), false)
 
             default:
                 return ("没有这个工具：\(name)", true)

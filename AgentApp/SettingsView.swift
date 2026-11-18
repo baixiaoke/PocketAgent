@@ -9,6 +9,13 @@ struct SettingsView: View {
     @State private var systemPrompt = Store.shared.settings.systemPrompt
     @State private var temperature = Store.shared.settings.temperature
     @State private var maxRounds = Store.shared.settings.maxRounds
+    @State private var requireApproval = Store.shared.settings.requireApproval
+    @State private var autoSpeak = Store.shared.settings.autoSpeak
+    @State private var speechRate = Store.shared.settings.speechRate
+    @State private var agentName = Store.shared.settings.agentName
+    @State private var userTitle = Store.shared.settings.userTitle
+    @State private var tone = Store.shared.settings.tone
+    @State private var companionMode = Store.shared.settings.companionMode
 
     @State private var testing = false
     @State private var testResult: String?
@@ -43,10 +50,30 @@ struct SettingsView: View {
                         Text(String(format: "%.1f", temperature)).font(.caption.monospaced())
                     }
                     Stepper("工具轮数上限：\(maxRounds)", value: $maxRounds, in: 1...20)
+                    Toggle("危险操作先问我", isOn: $requireApproval)
+                    Toggle("回答自动念出来", isOn: $autoSpeak)
+                    HStack {
+                        Text("语速")
+                        Slider(value: $speechRate, in: 0.35...0.6, step: 0.01)
+                        Text(String(format: "%.2f", speechRate)).font(.caption.monospaced())
+                    }
                 } header: {
                     Text("行为")
                 } footer: {
-                    Text("轮数是一句话里最多连续调几次工具。调太多会烧 token，8 轮够日常用。")
+                    Text("「危险操作」= 写文件、建提醒、打开链接、发通知。开着更安全，关掉更快。")
+                }
+
+                Section {
+                    TextField("小椒", text: $agentName)
+                    TextField("主人", text: $userTitle)
+                    Picker("语气", selection: $tone) {
+                        ForEach(["温柔", "俏皮", "直接", "自然"], id: \.self) { Text($0) }
+                    }
+                    Toggle("情感陪伴模式", isOn: $companionMode)
+                } header: {
+                    Text("人设 / 陪伴")
+                } footer: {
+                    Text("开着会多留意你的情绪、主动问候；关掉就只办事不寒暄。")
                 }
 
                 Section("系统提示词（人设）") {
@@ -100,9 +127,15 @@ struct SettingsView: View {
         s.systemPrompt = systemPrompt
         s.temperature = temperature
         s.maxRounds = maxRounds
+        s.requireApproval = requireApproval
+        s.autoSpeak = autoSpeak
+        s.speechRate = speechRate
+        s.agentName = agentName.isEmpty ? "小椒" : agentName
+        s.userTitle = userTitle.isEmpty ? "主人" : userTitle
+        s.tone = tone
+        s.companionMode = companionMode
         Store.shared.saveSettings(s)
-        Store.shared.saveAPIKey(apiKey)
-    }
+        Store.shared.saveAPIKey(apiKey)    }
 
     private func test() async {
         testing = true
