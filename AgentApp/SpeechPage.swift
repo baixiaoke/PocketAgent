@@ -351,6 +351,7 @@ struct SpeechModelPage: View {
     }
 
     // MARK: 情绪
+    @ViewBuilder
     private var moodSection: some View {
         Section {
             Toggle("情绪影响朗读语气", isOn: $moodAffectsVoice)
