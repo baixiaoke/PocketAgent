@@ -214,7 +214,7 @@ struct CallView: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.orange.opacity(0.85), in: RoundedRectangle(cornerRadius: 14))
+                .background(Theme.amber.opacity(0.85), in: RoundedRectangle(cornerRadius: 14))
             }
 
             if !speech.transcript.isEmpty {
@@ -232,7 +232,7 @@ struct CallView: View {
             }
 
             if let err = speech.errorText {
-                Text(err).font(.caption).foregroundStyle(.orange)
+                Text(err).font(.caption).foregroundStyle(Theme.amber)
             }
         }
         .padding(.bottom, 18)
@@ -247,7 +247,7 @@ struct CallView: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 62, height: 62)
-                    .background(speech.isListening ? Color.blue : Color.white.opacity(0.18), in: Circle())
+                    .background(speech.isListening ? Theme.cyan : Color.white.opacity(0.18), in: Circle())
             }
 
             Button {
@@ -258,7 +258,7 @@ struct CallView: View {
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 72, height: 72)
-                    .background(Color.red, in: Circle())
+                    .background(Theme.danger, in: Circle())
             }
 
             Button {

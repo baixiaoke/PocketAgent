@@ -64,6 +64,7 @@ struct SearchSheet: View {
                 }
             }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜聊天记录…")
+            .themedScroll(.settings)
             .navigationTitle("搜索")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

@@ -50,7 +50,7 @@ struct ChatView: View {
             }
             .navigationTitle(rt.current.title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .toolbarBackground(Theme.deep.opacity(0.92), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
@@ -253,7 +253,7 @@ struct ChatView: View {
 
     private func errorBanner(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.amber)
             Text(text).font(.caption).fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             Button {
@@ -262,7 +262,7 @@ struct ChatView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(.orange.opacity(0.12))
+        .background(Theme.amber.opacity(0.12))
     }
 
     private func approvalCard(_ pending: PendingApproval) -> some View {
@@ -271,7 +271,7 @@ struct ChatView: View {
                 Image(systemName: "hand.raised.fill").font(.caption)
                 Text(pending.summary).font(.caption.weight(.medium))
             }
-            .foregroundStyle(.orange)
+            .foregroundStyle(Theme.amber)
 
             HStack(spacing: 10) {
                 Button {
@@ -292,7 +292,7 @@ struct ChatView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(.orange.opacity(0.10))
+        .background(Theme.amber.opacity(0.10))
     }
 
     // MARK: - 输入区
@@ -450,8 +450,8 @@ struct MessageRow: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(.purple.opacity(0.15), in: Capsule())
-                    .foregroundStyle(.purple)
+                    .background(Theme.violet.opacity(0.15), in: Capsule())
+                    .foregroundStyle(Theme.violet)
                 }
                 Spacer(minLength: 0)
             }
@@ -525,7 +525,7 @@ struct MarkdownText: View {
                             .textSelection(.enabled)
                     }
                     .background(Color.black.opacity(0.85), in: RoundedRectangle(cornerRadius: 10))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Theme.mint)
                 } else if !part.isEmpty {
                     Text(part)
                 }

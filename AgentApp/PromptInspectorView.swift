@@ -52,6 +52,7 @@ struct PromptInspectorView: View {
                         .textSelection(.enabled)
                 }
             }
+            .themedScroll(.settings)
             .navigationTitle("实际提示词")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

@@ -422,7 +422,7 @@ struct SessionsView: View {
                         } label: {
                             Label("改名", systemImage: "pencil")
                         }
-                        .tint(.blue)
+                        .tint(Theme.cyan)
                     }
                     .swipeActions {
                         Button(role: .destructive) {
