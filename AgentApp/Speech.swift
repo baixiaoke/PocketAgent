@@ -15,6 +15,10 @@ final class SpeechEngine: NSObject, ObservableObject {
 
     /// 一句话说完（静音超时）时回调
     var onFinal: ((String) -> Void)?
+    /// 边听边回调（输入框dictation用）
+    var onPartial: ((String) -> Void)?
+    /// true = 不做语音审核，原样回调（输入框听写用）
+    var bypassReview = false
 
     private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "zh-CN"))
     private var request: SFSpeechAudioBufferRecognitionRequest?
@@ -78,6 +82,7 @@ final class SpeechEngine: NSObject, ObservableObject {
                     if let result {
                         self.transcript = result.bestTranscription.formattedString
                         self.lastChange = Date()
+                        self.onPartial?(self.transcript)
                         if result.isFinal { self.finishAndStop() }
                     }
                     if let error, self.isListening {
@@ -112,6 +117,11 @@ final class SpeechEngine: NSObject, ObservableObject {
     private func finishAndStop() {
         let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         stop()
+        if bypassReview {
+            guard !text.isEmpty else { return }
+            onFinal?(text)
+            return
+        }
         guard let reviewed = SpeechReview.review(text) else { return }   // ← 语音审核
         onFinal?(reviewed)
     }

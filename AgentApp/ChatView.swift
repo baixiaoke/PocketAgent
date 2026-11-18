@@ -18,6 +18,8 @@ struct ChatView: View {
     @State private var shareItems: [Any] = []
     @State private var showSearch = false
     @State private var editing: ChatMessage?
+    @StateObject private var dictation = SpeechEngine()
+    @State private var dictating = false
     @ObservedObject private var folder = ExternalFolder.shared
     @FocusState private var focused: Bool
 
@@ -251,8 +253,29 @@ struct ChatView: View {
 
     // MARK: - 输入区
     private var inputBar: some View {
-        HStack(alignment: .bottom, spacing: 10) {
-            TextField("让它干点什么…", text: $draft, axis: .vertical)
+        HStack(alignment: .bottom, spacing: 8) {
+            Button {
+                toggleDictation()
+            } label: {
+                Image(systemName: dictating ? "mic.fill" : "mic")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(dictating ? Color.white : Theme.cyan)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle().fill(dictating ? Theme.danger : Color.white.opacity(0.06))
+                    )
+                    .overlay(
+                        Circle().stroke(
+                            dictating ? Theme.danger.opacity(0.8) : Theme.cyan.opacity(0.35),
+                            lineWidth: 0.8)
+                    )
+                    .neonGlow(dictating ? Theme.danger : Theme.cyan, radius: 8, opacity: 0.5)
+                    .scaleEffect(dictating ? 1.04 : 1.0)
+                    .animation(.easeInOut(duration: 0.18), value: dictating)
+            }
+            .disabled(rt.isRunning)
+
+            TextField(dictating ? "在听…" : "让它干点什么…", text: $draft, axis: .vertical)
                 .lineLimit(1...6)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 14)
@@ -297,7 +320,37 @@ struct ChatView: View {
         let text = draft
         draft = ""
         focused = false
+        if dictating {
+            dictation.stop()
+            dictating = false
+        }
         rt.start(text)
+    }
+
+    /// 输入框语音转写：边说边出字，说完不自动发送
+    private func toggleDictation() {
+        if dictating {
+            dictation.stop()
+            dictating = false
+            return
+        }
+        Task {
+            let ok = await dictation.requestAuthorization()
+            guard ok else { return }
+
+            let prefix = draft
+            dictation.bypassReview = true          // 听写不做拒答式过滤
+            dictation.silenceTimeout = 2.2
+            dictation.onPartial = { t in
+                draft = prefix.isEmpty ? t : prefix + t
+            }
+            dictation.onFinal = { t in
+                draft = prefix.isEmpty ? t : prefix + t
+                dictating = false
+            }
+            dictation.start()
+            dictating = true
+        }
     }
 
     private func exportSession() {
