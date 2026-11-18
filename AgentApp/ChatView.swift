@@ -17,6 +17,8 @@ struct ChatView: View {
     @State private var showShare = false
     @State private var shareItems: [Any] = []
     @State private var showSearch = false
+    @State private var showMood = false
+    @ObservedObject private var mood = MoodStore.shared
     @State private var editing: ChatMessage?
     @StateObject private var dictation = SpeechEngine()
     @State private var dictating = false
@@ -59,6 +61,12 @@ struct ChatView: View {
                             showCall = true
                         } label: {
                             Image(systemName: "phone.fill")
+                        }
+                        Button {
+                            showMood = true
+                        } label: {
+                            Text(mood.current.emoji)
+                                .font(.system(size: 18))
                         }
                     }
                 }
@@ -144,6 +152,9 @@ struct ChatView: View {
             }
             .sheet(isPresented: $showSearch) {
                 SearchSheet().environmentObject(rt)
+            }
+            .sheet(isPresented: $showMood) {
+                MoodSheet()
             }
             .sheet(item: $editing) { msg in
                 EditMessageSheet(message: msg) { newText in

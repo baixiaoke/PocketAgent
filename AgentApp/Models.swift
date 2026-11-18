@@ -161,6 +161,9 @@ struct AgentSettings: Codable, Equatable {
         }
 
         out += "\n\n【工具与能力】\n" + AgentSettings.toolBrief
+
+        let mood = MoodStore.shared.current
+        out += "\n\n【你现在的状态】\(mood.promptLine)\n\(mood.behavior)"
         out += LongTermMemory.shared.promptFragment
 
         if unfilteredMode {

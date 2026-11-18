@@ -156,6 +156,10 @@ final class AgentRuntime: ObservableObject {
                     let snapshot = current.messages
                     Task { await MemoryExtractor.extract(from: snapshot, settings: settings, apiKey: apiKey) }
                 }
+
+                // 情绪分析：每轮之后更新一次（内部有 90 秒节流）
+                let moodSnapshot = current.messages
+                Task { await MoodAnalyzer.maybeAnalyze(messages: moodSnapshot, settings: settings, apiKey: apiKey) }
                 return
             }
 
