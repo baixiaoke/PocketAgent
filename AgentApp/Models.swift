@@ -75,7 +75,9 @@ struct AgentSettings: Codable, Equatable {
     var autoExtractMemory: Bool = true      // 每轮自动提炼记忆
     var careEnabled: Bool = false           // 早晚定时问候
     var careMorningHour: Int = 8
+    var careMorningMinute: Int = 0
     var careEveningHour: Int = 22
+    var careEveningMinute: Int = 30
 
     // 模型路由
     var autoModelSwitch: Bool = false       // 长问题自动用推理模型
@@ -127,7 +129,9 @@ struct AgentSettings: Codable, Equatable {
         autoExtractMemory = (try? c.decodeIfPresent(Bool.self, forKey: .autoExtractMemory)) ?? autoExtractMemory
         careEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .careEnabled)) ?? careEnabled
         careMorningHour = (try? c.decodeIfPresent(Int.self, forKey: .careMorningHour)) ?? careMorningHour
+        careMorningMinute = (try? c.decodeIfPresent(Int.self, forKey: .careMorningMinute)) ?? careMorningMinute
         careEveningHour = (try? c.decodeIfPresent(Int.self, forKey: .careEveningHour)) ?? careEveningHour
+        careEveningMinute = (try? c.decodeIfPresent(Int.self, forKey: .careEveningMinute)) ?? careEveningMinute
         autoModelSwitch = (try? c.decodeIfPresent(Bool.self, forKey: .autoModelSwitch)) ?? autoModelSwitch
         reasoningModel = (try? c.decodeIfPresent(String.self, forKey: .reasoningModel)) ?? reasoningModel
         imageBaseURL = (try? c.decodeIfPresent(String.self, forKey: .imageBaseURL)) ?? imageBaseURL

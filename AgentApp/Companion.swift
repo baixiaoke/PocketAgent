@@ -69,13 +69,15 @@ enum CareScheduler {
         guard settings.careEnabled else { return }
 
         schedule(id: morningID,
-                 hour: settings.careMorningHour, minute: 0,
+                 hour: settings.careMorningHour,
+                 minute: settings.careMorningMinute,
                  title: settings.agentName,
                  body: Persona.greeting(name: settings.agentName,
                                         userTitle: settings.userTitle,
                                         hour: settings.careMorningHour))
         schedule(id: eveningID,
-                 hour: settings.careEveningHour, minute: 30,
+                 hour: settings.careEveningHour,
+                 minute: settings.careEveningMinute,
                  title: settings.agentName,
                  body: Persona.greeting(name: settings.agentName,
                                         userTitle: settings.userTitle,

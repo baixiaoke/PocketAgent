@@ -21,8 +21,17 @@ struct SettingsView: View {
     // 主动 / 自动化
     @State private var autoExtractMemory = Store.shared.settings.autoExtractMemory
     @State private var careEnabled = Store.shared.settings.careEnabled
-    @State private var careMorningHour = Store.shared.settings.careMorningHour
-    @State private var careEveningHour = Store.shared.settings.careEveningHour
+    @State private var morningTime = SettingsView.makeTime(Store.shared.settings.careMorningHour,
+                                                          Store.shared.settings.careMorningMinute)
+    @State private var eveningTime = SettingsView.makeTime(Store.shared.settings.careEveningHour,
+                                                          Store.shared.settings.careEveningMinute)
+
+    static func makeTime(_ hour: Int, _ minute: Int) -> Date {
+        var c = DateComponents()
+        c.hour = hour
+        c.minute = minute
+        return Calendar.current.date(from: c) ?? Date()
+    }
     @State private var autoModelSwitch = Store.shared.settings.autoModelSwitch
     @State private var reasoningModel = Store.shared.settings.reasoningModel
 
@@ -142,8 +151,8 @@ struct SettingsView: View {
                     Toggle("每轮自动提炼记忆", isOn: $autoExtractMemory)
                     Toggle("定时问候", isOn: $careEnabled)
                     if careEnabled {
-                        Stepper("早上 \(careMorningHour):00", value: $careMorningHour, in: 5...11)
-                        Stepper("晚上 \(careEveningHour):30", value: $careEveningHour, in: 18...23)
+                        DatePicker("早上", selection: $morningTime, displayedComponents: .hourAndMinute)
+                        DatePicker("晚上", selection: $eveningTime, displayedComponents: .hourAndMinute)
                     }
                     Toggle("长问题自动换推理模型", isOn: $autoModelSwitch)
                     if autoModelSwitch {
@@ -285,8 +294,13 @@ struct SettingsView: View {
         s.unfilteredMode = unfilteredMode
         s.autoExtractMemory = autoExtractMemory
         s.careEnabled = careEnabled
-        s.careMorningHour = careMorningHour
-        s.careEveningHour = careEveningHour
+
+        let mp = Calendar.current.dateComponents([.hour, .minute], from: morningTime)
+        s.careMorningHour = mp.hour ?? 8
+        s.careMorningMinute = mp.minute ?? 0
+        let ep = Calendar.current.dateComponents([.hour, .minute], from: eveningTime)
+        s.careEveningHour = ep.hour ?? 22
+        s.careEveningMinute = ep.minute ?? 30
         s.autoModelSwitch = autoModelSwitch
         s.reasoningModel = reasoningModel
         Store.shared.saveSettings(s)
