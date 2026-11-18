@@ -111,11 +111,16 @@ struct GlassCard: ViewModifier {
     var tint: Color = Theme.cyan
 
     func body(content: Content) -> some View {
-        content
+        // 滑杆 20%…100% → 实色浓度 0.12…0.94，差得很明显
+        let g = ThemeManager.shared.glassOpacity
+        let solid = 0.12 + 0.82 * g
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        return content
             .background {
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .opacity(ThemeManager.shared.glassOpacity)
+                ZStack {
+                    shape.fill(.ultraThinMaterial)          // 固定模糊底
+                    shape.fill(Theme.panel.opacity(solid))  // 浓度跟滑杆走
+                }
             }
             .overlay(
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
@@ -129,6 +134,19 @@ struct GlassCard: ViewModifier {
 }
 
 extension View {
+    /// 只用玻璃底（不加描边），给输入框这类用
+    func glassFill(radius: CGFloat = 20) -> some View {
+        let g = ThemeManager.shared.glassOpacity
+        let solid = 0.12 + 0.82 * g
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        return self.background {
+            ZStack {
+                shape.fill(.ultraThinMaterial)
+                shape.fill(Theme.panel.opacity(solid))
+            }
+        }
+    }
+
     func glassCard(radius: CGFloat = 18, tint: Color = Theme.cyan) -> some View {
         modifier(GlassCard(radius: radius, tint: tint))
     }

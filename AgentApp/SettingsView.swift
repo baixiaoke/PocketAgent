@@ -221,7 +221,7 @@ struct SettingsView: View {
                             .frame(width: 42, alignment: .trailing)
                     }
                     HStack {
-                        Text("面板透明度")
+                        Text("面板不透明度")
                         Slider(value: Binding(
                             get: { ThemeManager.shared.glassOpacity },
                             set: { ThemeManager.shared.setGlassOpacity($0) }
@@ -233,7 +233,7 @@ struct SettingsView: View {
                 } header: {
                     Text("外观")
                 } footer: {
-                    Text("配色一换，所有页面跟着变；深浅只影响系统控件。")
+                    Text("配色一换，所有页面跟着变；深浅只影响系统控件。面板不透明度：100% = 几乎实心，20% = 透出背景。")
                 }
 
                 Section {

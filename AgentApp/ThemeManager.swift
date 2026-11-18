@@ -134,7 +134,7 @@ final class ThemeManager: ObservableObject {
         let dim = UserDefaults.standard.object(forKey: "pa.bgDim") as? Double
         backgroundDim = dim ?? 0.55
         let glass = UserDefaults.standard.object(forKey: "pa.glassOpacity") as? Double
-        glassOpacity = glass ?? 0.85
+        glassOpacity = glass ?? 0.9
     }
 
     func setBackgroundDim(_ v: Double) {

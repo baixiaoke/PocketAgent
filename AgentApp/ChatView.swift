@@ -324,7 +324,7 @@ struct ChatView: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+                .glassFill(radius: 20)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
                         .stroke(focused ? Theme.cyan.opacity(0.55) : Color.white.opacity(0.08), lineWidth: 0.8)
@@ -356,7 +356,12 @@ struct ChatView: View {
         .padding(.horizontal, 12)
         .padding(.top, 8)
         .padding(.bottom, 8)
-        .background(.ultraThinMaterial)
+        .background {
+            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                Rectangle().fill(Theme.panel.opacity(0.10 + 0.80 * themeMgr.glassOpacity))
+            }
+        }
         .overlay(alignment: .top) { PulseBar().opacity(0.7) }
     }
 
