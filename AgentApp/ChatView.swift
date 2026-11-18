@@ -1,11 +1,14 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     @EnvironmentObject private var rt: AgentRuntime
     @State private var draft = ""
     @State private var showSettings = false
     @State private var showSessions = false
+    @State private var showFolderPicker = false
+    @ObservedObject private var folder = ExternalFolder.shared
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -36,6 +39,19 @@ struct ChatView: View {
                             rt.newSession()
                         } label: { Label("新对话", systemImage: "square.and.pencil") }
                         Button {
+                            showFolderPicker = true
+                        } label: {
+                            Label(folder.name.map { "换文件夹（现在：\($0)）" } ?? "连接文件夹…",
+                                  systemImage: "folder.badge.plus")
+                        }
+                        if folder.name != nil {
+                            Button(role: .destructive) {
+                                folder.clear()
+                            } label: {
+                                Label("断开外部文件夹", systemImage: "folder.badge.minus")
+                            }
+                        }
+                        Button {
                             showSettings = true
                         } label: { Label("设置", systemImage: "gearshape") }
                     } label: {
@@ -48,6 +64,13 @@ struct ChatView: View {
             }
             .sheet(isPresented: $showSessions) {
                 SessionsView()
+            }
+            .fileImporter(isPresented: $showFolderPicker,
+                          allowedContentTypes: [.folder],
+                          allowsMultipleSelection: false) { result in
+                if case .success(let urls) = result, let url = urls.first {
+                    folder.set(url)
+                }
             }
         }
     }

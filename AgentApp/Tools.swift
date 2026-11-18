@@ -63,6 +63,14 @@ final class ToolRegistry {
                      parameters: obj(["title": str("待办标题"),
                                       "notes": str("备注，可为空")],
                                      required: ["title"])),
+
+            ToolSpec(name: "folder_list",
+                     description: "列出用户已授权的外部文件夹里的内容（iCloud Drive、下载目录等）。用户没授权就返回提示。",
+                     parameters: obj(["path": str("相对该文件夹的路径，可为空")], required: [])),
+
+            ToolSpec(name: "folder_read",
+                     description: "读取用户已授权的外部文件夹里的文本文件（最多 20000 字符）。",
+                     parameters: obj(["path": str("相对该文件夹的文件路径")], required: ["path"])),
         ]
     }
 
@@ -160,6 +168,38 @@ final class ToolRegistry {
                 guard !title.isEmpty else { return ("标题不能为空", true) }
                 let notes = args["notes"] as? String ?? ""
                 return try await RemindersBox.add(title: title, notes: notes)
+
+            case "folder_list":
+                guard let root = ExternalFolder.shared.root else {
+                    return ("用户还没授权任何外部文件夹。请让他在 App 右上角 ⋯ → 连接文件夹 里选一个。", true)
+                }
+                guard let dir = ExternalFolder.shared.resolve(args["path"] as? String ?? "") else {
+                    return ("路径越界（只能访问已授权文件夹内部）", true)
+                }
+                let items = (try? FileManager.default.contentsOfDirectory(
+                    at: dir, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey])) ?? []
+                if items.isEmpty {
+                    return ("（空目录：\(ExternalFolder.shared.relativePath(dir))）", false)
+                }
+                let lines = items.sorted { $0.lastPathComponent < $1.lastPathComponent }.map { u -> String in
+                    let v = try? u.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
+                    if v?.isDirectory == true { return "\(u.lastPathComponent)/" }
+                    return "\(u.lastPathComponent)  \(v?.fileSize ?? 0) bytes"
+                }
+                return ("外部文件夹「\(root.lastPathComponent)」/ \(ExternalFolder.shared.relativePath(dir))：\n"
+                        + lines.joined(separator: "\n"), false)
+
+            case "folder_read":
+                guard ExternalFolder.shared.root != nil else {
+                    return ("用户还没授权任何外部文件夹。请让他在 App 右上角 ⋯ → 连接文件夹 里选一个。", true)
+                }
+                guard let url = ExternalFolder.shared.resolve(args["path"] as? String ?? "") else {
+                    return ("路径越界（只能访问已授权文件夹内部）", true)
+                }
+                guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+                    return ("读不到：\(url.lastPathComponent)", true)
+                }
+                return (String(text.prefix(20_000)), false)
 
             default:
                 return ("没有这个工具：\(name)", true)
