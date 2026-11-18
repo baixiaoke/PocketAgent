@@ -385,9 +385,10 @@ struct MessageRow: View {
             }
 
         case .assistant:
-            VStack(alignment: .leading, spacing: 8) {
-                if !message.content.isEmpty {
-                    MarkdownText(text: message.content)
+            VStack(alignment: .leading, spacing: 6) {
+                // 「||| 分隔」按人格设定拆成多个气泡，像连发消息
+                ForEach(Array(Self.splitBubbles(message.content).enumerated()), id: \.offset) { _, part in
+                    MarkdownText(text: part)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .glassCard(radius: 16, tint: Theme.cyan)
@@ -536,5 +537,17 @@ struct EditMessageSheet: View {
                 }
             }
         }
+    }
+}
+
+extension MessageRow {
+    /// 按 ||| 拆成多条气泡；空段丢掉
+    static func splitBubbles(_ text: String) -> [String] {
+        guard text.contains("|||") else {
+            return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? [] : [text]
+        }
+        return text.components(separatedBy: "|||")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 }

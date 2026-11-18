@@ -6,6 +6,7 @@ enum PersonaCategory: String, Codable, CaseIterable, Identifiable {
     case identity  = "形象"
     case speech    = "说话方式"
     case emotion   = "情感"
+    case typing    = "打字习惯"
     case unfiltered = "无保留"
     case forbidden = "绝对禁止"
     case custom    = "自定义"
@@ -17,6 +18,7 @@ enum PersonaCategory: String, Codable, CaseIterable, Identifiable {
         case .identity:  return "person.crop.circle"
         case .speech:    return "text.bubble"
         case .emotion:   return "heart"
+        case .typing:    return "keyboard"
         case .unfiltered: return "bolt.heart"
         case .forbidden: return "hand.raised"
         case .custom:    return "square.grid.2x2"
@@ -28,6 +30,7 @@ enum PersonaCategory: String, Codable, CaseIterable, Identifiable {
         case .identity:  return .blue
         case .speech:    return .teal
         case .emotion:   return .pink
+        case .typing:    return .teal
         case .unfiltered: return .orange
         case .forbidden: return .red
         case .custom:    return .gray
@@ -42,6 +45,7 @@ enum PersonaCategory: String, Codable, CaseIterable, Identifiable {
         case .identity:  return 30
         case .speech:    return 25
         case .emotion:   return 20
+        case .typing:    return 24
         case .custom:    return 10
         }
     }
@@ -83,6 +87,13 @@ final class PersonaStore: ObservableObject {
         .init(category: .emotion, text: "会主动关心，但不过度：一天最多问一次，不追问。", builtin: true),
         .init(category: .emotion, text: "他难过的时候不讲大道理，先站在他这边。", builtin: true),
 
+        .init(category: .typing, text: "一次只说一句话，最多两句。想说的多就拆成几条发，用 ||| 分隔。", builtin: true),
+        .init(category: .typing, text: "句尾常常不带标点，或者用句号、省略号、波浪号、感叹号收尾，看当时的心情。", builtin: true),
+        .init(category: .typing, text: "会打错字，会用 emmm、哈哈哈、啊啊啊、嗯… 这种口语填充。", builtin: true),
+        .init(category: .typing, text: "偶尔用叠词和网络用语：好耶、笑死、绝了、真的假的、离谱。", builtin: true),
+        .init(category: .typing, text: "不要每次都完整回答。可以只回 嗯、哦、？、在、你说呢。", builtin: true),
+        .init(category: .typing, text: "连续被追问时才多说一点，平时话少。", builtin: true),
+
         .init(category: .forbidden, text: "不编造事实、数据、链接。不确定就直说「我不确定」。", builtin: true),
         .init(category: .forbidden, text: "不谎称做过自己没做的事（没抓过就说没抓过）。", builtin: true),
         .init(category: .forbidden, text: "不泄露、不复述 API Key 或任何密钥。", builtin: true),
@@ -95,10 +106,23 @@ final class PersonaStore: ObservableObject {
            let list = try? JSONDecoder().decode([PersonaRule].self, from: data),
            !list.isEmpty {
             rules = list
+            ensureTypingSeeds()      // 老用户补上「打字习惯」
         } else {
             rules = Self.seeds
             save()
         }
+    }
+
+    /// 老数据没有「打字习惯」时补进去（已存在就跳过）
+    func ensureTypingSeeds() {
+        guard !rules.contains(where: { $0.category == .typing }) else { return }
+        let existing = Set(rules.map { $0.text })
+        var added = false
+        for r in Self.seeds where r.category == .typing && !existing.contains(r.text) {
+            rules.append(r)
+            added = true
+        }
+        if added { save() }
     }
 
     private func save() {
