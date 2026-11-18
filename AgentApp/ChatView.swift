@@ -433,13 +433,14 @@ struct MessageRow: View {
             }
 
         case .assistant:
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 10) {
                 // 「||| 分隔」按人格设定拆成多个气泡，像连发消息
-                ForEach(Array(Self.splitBubbles(message.content).enumerated()), id: \.offset) { _, part in
+                ForEach(Array(Self.splitBubbles(message.content).enumerated()), id: \.offset) { idx, part in
                     MarkdownText(text: part)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .glassCard(radius: 16, tint: Theme.cyan)
+                        .glassCard(radius: idx == 0 ? 16 : 18, tint: Theme.cyan)
+                        .padding(.leading, idx == 0 ? 0 : 8)   // 连发的第二条往右错一点，像一条条发的
                         .textSelection(.enabled)
                 }
                 if let calls = message.toolCalls, !calls.isEmpty {
@@ -589,13 +590,48 @@ struct EditMessageSheet: View {
 }
 
 extension MessageRow {
-    /// 按 ||| 拆成多条气泡；空段丢掉
+    /// 拆气泡：优先按 ||| ；模型没写就按句号/问号/感叹号自动拆（仅限短对话，不动长文与代码）
     static func splitBubbles(_ text: String) -> [String] {
-        guard text.contains("|||") else {
-            return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? [] : [text]
+        let raw = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return [] }
+
+        if raw.contains("|||") {
+            return raw.components(separatedBy: "|||")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
         }
-        return text.components(separatedBy: "|||")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+
+        // 长文、代码、列表不拆，避免把正经内容打散
+        let looksLong = raw.count > 160
+        let looksCode = raw.contains("```") || raw.contains("\n- ") || raw.contains("\n1.")
+        let multiLine = raw.filter { $0 == "\n" }.count >= 2
+        if looksLong || looksCode || multiLine {
+            return [raw]
+        }
+
+        // 按句末标点切开，保留标点
+        var parts: [String] = []
+        var current = ""
+        let enders: Set<Character> = ["。", "！", "？", "…", "!", "?"]
+        for ch in raw {
+            current.append(ch)
+            if enders.contains(ch) {
+                let t = current.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !t.isEmpty { parts.append(t) }
+                current = ""
+            }
+        }
+        let tail = current.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !tail.isEmpty { parts.append(tail) }
+
+        // 太碎就并回来（少于 2 段说明拆不动）
+        if parts.count < 2 { return [raw] }
+        // 超过 5 段的，把后面的并成一段，避免刷屏
+        if parts.count > 5 {
+            let head = Array(parts.prefix(4))
+            let rest = parts.dropFirst(4).joined()
+            return head + [rest]
+        }
+        return parts
     }
 }

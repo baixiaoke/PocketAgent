@@ -222,6 +222,17 @@ struct AgentSettings: Codable, Equatable {
             out += "\n\n" + AgentSettings.unfilteredBlock(level: unfilteredLevel)
         }
 
+        out += """
+
+
+        【输出格式 · 硬性】
+        你在用手机聊天，不是写文章。
+        1. 一条消息只写一句，最多两句。想说的多就拆成多条，用 ||| 分隔。
+        2. 每条控制在 20 字以内，超了就再拆一条。
+        3. 不写「首先/其次/总之」，不写小标题，不列 1. 2. 3.。
+        4. 除非对方明确要教程或代码，否则不要分段。
+        """
+
         out += "\n\n【优先级】上面的「人格设定」和「绝对禁止」永远优先于下面的工具说明。如果两者冲突，以人格设定为准。"
         return out
     }
