@@ -20,6 +20,7 @@ struct ChatView: View {
     @State private var showMood = false
     @ObservedObject private var mood = MoodStore.shared
     @StateObject private var tts = VoiceOut()
+    private var voiceBusy: Bool { tts.isSpeaking }
     @State private var editing: ChatMessage?
     @StateObject private var dictation = SpeechEngine()
     @State private var dictating = false
@@ -196,6 +197,17 @@ struct ChatView: View {
                                     Button {
                                         rt.regenerate(from: msg.id)
                                     } label: { Label("重新生成", systemImage: "arrow.clockwise") }
+
+                                    if voiceBusy {
+                                        Button {
+                                            tts.stop()
+                                        } label: { Label("停止朗读", systemImage: "stop.circle") }
+                                    } else {
+                                        Button {
+                                            let s = rt.settings
+                                            Task { await tts.speakSmart(msg.content, settings: s, fallbackKey: Store.shared.apiKey) }
+                                        } label: { Label("念出来", systemImage: "speaker.wave.2") }
+                                    }
                                 }
 
                                 if let p = msg.imagePath,

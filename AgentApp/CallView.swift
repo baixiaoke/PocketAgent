@@ -96,6 +96,12 @@ struct CallView: View {
                 speakLast()
             }
         }
+        .onChange(of: speech.transcript) { text in
+            // 打断：它还在念的时候你开口，就让它闭嘴
+            if voice.isSpeaking, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                voice.stop()
+            }
+        }
     }
 
     // MARK: 背景
