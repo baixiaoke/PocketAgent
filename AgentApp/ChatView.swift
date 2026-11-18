@@ -18,6 +18,8 @@ struct ChatView: View {
     @State private var shareItems: [Any] = []
     @State private var showSearch = false
     @State private var showMood = false
+    @State private var renamingCurrent = false
+    @State private var titleDraft = ""
     @ObservedObject private var mood = MoodStore.shared
     @StateObject private var tts = VoiceOut()
     private var voiceBusy: Bool { tts.isSpeaking }
@@ -77,6 +79,10 @@ struct ChatView: View {
                         Button {
                             rt.newSession()
                         } label: { Label("新对话", systemImage: "square.and.pencil") }
+                        Button {
+                            titleDraft = rt.current.title
+                            renamingCurrent = true
+                        } label: { Label("重命名当前会话", systemImage: "pencil") }
                         Button {
                             showFolderPicker = true
                         } label: {
@@ -157,6 +163,11 @@ struct ChatView: View {
             }
             .sheet(isPresented: $showMood) {
                 MoodSheet()
+            }
+            .alert("重命名会话", isPresented: $renamingCurrent) {
+                TextField("会话名称", text: $titleDraft)
+                Button("保存") { rt.rename(rt.current, to: titleDraft) }
+                Button("取消", role: .cancel) {}
             }
             .onChange(of: rt.isRunning) { running in
                 // 聊天页也支持「回答自动念出来」，通话页自己会念，别重复

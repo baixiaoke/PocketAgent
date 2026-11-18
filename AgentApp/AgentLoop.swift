@@ -247,6 +247,19 @@ final class AgentRuntime: ObservableObject {
         start(newText)
     }
 
+    /// 改名：列表和当前会话同步
+    func rename(_ session: ChatSession, to newTitle: String) {
+        let t = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        if let i = sessions.firstIndex(where: { $0.id == session.id }) {
+            sessions[i].title = t
+        }
+        if current.id == session.id {
+            current.title = t
+        }
+        persist()
+    }
+
     func delete(_ session: ChatSession) {
         sessions.removeAll { $0.id == session.id }
         if current.id == session.id {

@@ -398,6 +398,9 @@ struct SessionsView: View {
     @EnvironmentObject private var rt: AgentRuntime
     @Environment(\.dismiss) private var dismiss
 
+    @State private var renaming: ChatSession?
+    @State private var draftTitle = ""
+
     var body: some View {
         NavigationStack {
             List {
@@ -411,6 +414,15 @@ struct SessionsView: View {
                             Text("\(session.messages.count) 条 · \(session.updatedAt.formatted(date: .abbreviated, time: .shortened))")
                                 .font(.caption2).foregroundStyle(.secondary)
                         }
+                    }
+                    .swipeActions(edge: .leading) {
+                        Button {
+                            draftTitle = session.title
+                            renaming = session
+                        } label: {
+                            Label("改名", systemImage: "pencil")
+                        }
+                        .tint(.blue)
                     }
                     .swipeActions {
                         Button(role: .destructive) {
@@ -430,6 +442,19 @@ struct SessionsView: View {
                         dismiss()
                     } label: { Image(systemName: "plus") }
                 }
+            }
+            .alert("重命名会话", isPresented: Binding(
+                get: { renaming != nil },
+                set: { if !$0 { renaming = nil } }
+            )) {
+                TextField("会话名称", text: $draftTitle)
+                Button("保存") {
+                    if let s = renaming { rt.rename(s, to: draftTitle) }
+                    renaming = nil
+                }
+                Button("取消", role: .cancel) { renaming = nil }
+            } message: {
+                Text("给它起个你认得出来的名字")
             }
         }
     }
