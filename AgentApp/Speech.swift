@@ -273,68 +273,34 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         guard !clean.isEmpty else { return }
 
         // 同一条内容 3 秒内不重复念（通话页和聊天页可能同时触发）
-        if clean == lastText, Date().timeIntervalSince(lastAt) < 3 {
-            return
-        }
+        if clean == lastText, Date().timeIntervalSince(lastAt) < 3 { return }
         lastText = clean
         lastAt = Date()
 
         if !settings.ttsBaseURL.isEmpty, !settings.ttsModel.isEmpty {
-            // 长文本一次合成容易超时或被截断，这里切成 ≤280 字再合成
-            let limit = max(100, min(900, settings.ttsChunkLimit))
-            let pieces = Self.chunk(clean, limit: limit)
-            if pieces.count > 1 {
-                isSpeaking = true
-                activateForPlayback()
-                for piece in pieces {
-                    if let data = await Self.fetchSpeech(piece, settings: settings, fallbackKey: fallbackKey),
-                       let p = try? AVAudioPlayer(data: data) {
-                        player = p
-                        p.play()
-                        let who = settings.ttsVoice.isEmpty ? settings.ttsModel : settings.ttsVoice
-                        lastSource = "云端 · " + who
-                        // 等这一段念完
-                        var waited = 0.0
-                        while p.isPlaying && waited < 90 {
-                            try? await Task.sleep(nanoseconds: 200_000_000)
-                            waited += 0.2
-                        }
-                        try? await Task.sleep(nanoseconds: 250_000_000)   // 段间小睡，避开限流
-                    } else {
-                        let why = MiMoVoice.lastError.isEmpty ? "没返回音频" : MiMoVoice.lastError
-                        lastSource = "云端失败（" + why + "），剩下的跳过"
-                    }
-                }
-                isSpeaking = false
-                return
-            }
-
-            if let data = await Self.fetchSpeech(clean, settings: settings, fallbackKey: fallbackKey) {
+            // 整段一次合成，不分段、不重试（和 aurabot 一致，这是它稳定的关键）
+            let data = await Self.fetchSpeech(clean, settings: settings, fallbackKey: fallbackKey)
+            if let data = data, let p = try? AVAudioPlayer(data: data) {
                 stop()
                 activateForPlayback()
-                do {
-                    let p = try AVAudioPlayer(data: data)
-                    p.prepareToPlay()
-                    player = p
-                    p.play()
-                    isSpeaking = true
-                    let who = settings.ttsVoice.isEmpty ? settings.ttsModel : settings.ttsVoice
-                    lastSource = "云端 · " + who
-                    Task { @MainActor in
-                        while let cur = self.player, cur.isPlaying {
-                            try? await Task.sleep(nanoseconds: 200_000_000)
-                        }
-                        self.isSpeaking = false
+                p.prepareToPlay()
+                player = p
+                p.play()
+                isSpeaking = true
+                let who = settings.ttsVoice.isEmpty ? settings.ttsModel : settings.ttsVoice
+                lastSource = "云端 · " + who
+                Task { @MainActor in
+                    while let cur = self.player, cur.isPlaying {
+                        try? await Task.sleep(nanoseconds: 200_000_000)
                     }
-                    return
-                } catch {
-                    lastSource = "云端音频播放失败：" + error.localizedDescription
+                    self.isSpeaking = false
                 }
-            } else if !settings.ttsBaseURL.isEmpty, !settings.ttsModel.isEmpty {
-                let why = MiMoVoice.lastError.isEmpty ? "没返回音频" : MiMoVoice.lastError
-                lastSource = "云端失败（" + why + "），已用本地音"
+                return
             }
+            let why = MiMoVoice.lastError.isEmpty ? "没返回音频" : MiMoVoice.lastError
+            lastSource = "云端失败（" + why + "），已用本地音"
         }
+
         lastSource = "本地系统语音"
         speak(clean)
     }
@@ -348,18 +314,35 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         // 小米 MiMo：走 chat/completions，音频在 message.audio.data
         if MiMoVoice.looksLikeMiMo(model: settings.ttsModel, base: settings.ttsBaseURL) {
             let isDesign = settings.ttsModel.lowercased().contains("voicedesign")
-            // 情绪只在开关打开时生效；voicedesign 的音色由描述决定，混进情绪会换嗓子
-            let toward = (settings.moodAffectsVoice && !isDesign)
-                ? MoodStore.shared.current.voiceStyle
-                : ""
-            // 风格 = 用户填的风格 + 情绪语气（都为空就不发）
+            let isClone = settings.ttsModel.lowercased().contains("voiceclone")
+
+            // voicedesign：描述 = 自定义描述（若填了中文描述）否则留空，让 MiMoVoice 按关键词自动选普通/成人音色
+            var designDesc = ""
+            if isDesign {
+                let custom = settings.ttsStyle.trimmingCharacters(in: .whitespaces)
+                if !custom.isEmpty {
+                    designDesc = custom
+                } else {
+                    let v = settings.ttsVoice.trimmingCharacters(in: .whitespaces)
+                    // 只有像人写的描述才用（含中文）；alloy 这类旧值忽略
+                    if v.contains(where: { $0.unicodeScalars.contains { $0.value > 0x4E00 } }) {
+                        designDesc = v
+                    }
+                }
+            }
+
+            // 内置音色 / 克隆：风格 = 自定义风格 + 情绪语气
             var styleParts: [String] = []
-            if !isDesign {
+            if !isDesign && !isClone {
                 let custom = settings.ttsStyle.trimmingCharacters(in: .whitespaces)
                 if !custom.isEmpty { styleParts.append(custom) }
+                if settings.moodAffectsVoice {
+                    let toward = MoodStore.shared.current.voiceStyle
+                    if !toward.isEmpty { styleParts.append(toward) }
+                }
             }
-            if !toward.isEmpty { styleParts.append(toward) }
-            let style = isDesign ? settings.ttsVoice : styleParts.joined(separator: "，")
+
+            let style = isDesign ? designDesc : styleParts.joined(separator: "，")
             return await MiMoVoice.synth(text: text,
                                          voice: settings.ttsVoice,
                                          style: style,

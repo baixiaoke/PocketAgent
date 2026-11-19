@@ -10,7 +10,6 @@ struct SpeechModelPage: View {
     @State private var voice = Store.shared.settings.ttsVoice
     @State private var style = Store.shared.settings.ttsStyle
     @State private var moodAffectsVoice = Store.shared.settings.moodAffectsVoice
-    @State private var chunkLimit = Store.shared.settings.ttsChunkLimit
     @State private var cacheKB = MiMoGuard.cacheSize() / 1024
 
     @State private var models: [String] = []
@@ -205,7 +204,7 @@ struct SpeechModelPage: View {
         } header: {
             Text("音色描述")
         } footer: {
-            Text("写清：性别年龄 + 音色质地 + 情绪 + 语速。别写混响/回声这类后期词，也别写「普通」「标准」。")
+            Text("留空 = 自动用内置描述（命中成人关键词会自动切成人音色）。想固定音色就写：性别年龄 + 音色质地 + 情绪 + 语速。别写混响/回声这类后期词。")
         }
     }
 
@@ -355,13 +354,8 @@ struct SpeechModelPage: View {
     private var moodSection: some View {
         Section {
             Toggle("情绪影响朗读语气", isOn: $moodAffectsVoice)
-            Picker("分段长度", selection: $chunkLimit) {
-                Text("短 150 字（出字快，请求多）").tag(150)
-                Text("中 400 字").tag(400)
-                Text("长 700 字（请求少，首字慢）").tag(700)
-            }
         } footer: {
-            Text("情绪只调语速节奏，不改嗓音。分段越长请求越少，越不容易被限流。")
+            Text("情绪只调语速节奏，不改嗓音。整段一次合成，不分段请求。")
         }
 
         Section {
@@ -433,7 +427,6 @@ struct SpeechModelPage: View {
         s.ttsVoice = voice
         s.ttsStyle = style
         s.moodAffectsVoice = moodAffectsVoice
-        s.ttsChunkLimit = chunkLimit
         let data = await VoiceOut.fetchSpeech("你好，我是青露，现在在测试语音。",
                                              settings: s,
                                              fallbackKey: Store.shared.apiKey)
@@ -510,7 +503,6 @@ struct SpeechModelPage: View {
         s.ttsVoice = voice.trimmingCharacters(in: .whitespaces)
         s.ttsStyle = style.trimmingCharacters(in: .whitespaces)
         s.moodAffectsVoice = moodAffectsVoice
-        s.ttsChunkLimit = chunkLimit
         Store.shared.saveSettings(s)
     }
 }

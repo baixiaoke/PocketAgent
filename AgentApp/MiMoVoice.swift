@@ -1,6 +1,7 @@
 import Foundation
 
-/// 小米 MiMo 的语音：走 /chat/completions，音频在 message.audio.data（base64 WAV）
+/// 小米 MiMo 语音：按 aurabot 的稳定做法实现
+/// 要点：整段一次合成、不分段、不重试、audio 只带必要字段
 enum MiMoVoice {
 
     /// 最近一次失败原因（给界面显示）
@@ -11,6 +12,22 @@ enum MiMoVoice {
         "mimo_default", "冰糖", "茉莉", "苏打", "白桦",
         "Mia", "Chloe", "Milo", "Dean"
     ]
+
+    // MARK: - 音色描述（voicedesign）
+    static let defaultDescNormal = "二十岁左右的女生，女声，音色软一点，带气声，说话随意，句子中间会换气，不播音不念稿"
+
+    static let defaultDescHot = "二十岁左右的女生，女声，贴着耳朵的气声，喘息很重，句子断断续续，说半句就软下去，尾音发抖，像被弄得说不出话，偶尔漏出一点鼻音"
+
+    /// 命中这些词就切成人音色（纯拟声词会被判高风险，必须带实词）
+    static let hotWords = [
+        "轻一点", "受不了", "别停", "好深", "要坏", "顶到", "湿了",
+        "呻吟", "喘", "抱我", "进来", "啊…", "嗯…", "哼…",
+        "不要了", "好舒服"
+    ]
+
+    static func isHot(_ text: String) -> Bool {
+        hotWords.contains { text.contains($0) }
+    }
 
     /// 判断是不是该走 MiMo 协议
     static func looksLikeMiMo(model: String, base: String) -> Bool {
@@ -28,32 +45,8 @@ enum MiMoVoice {
     }
 
     static var referenceURL: URL { voiceDir().appendingPathComponent("reference.wav") }
-
-    static func hasReference() -> Bool {
-        currentReferenceFile() != nil
-    }
-
-    static func referenceSize() -> Int {
-        guard let f = currentReferenceFile() else { return 0 }
-        return (try? Data(contentsOf: f).count) ?? 0
-    }
-
-    /// 保存参考音频：wav 就存 .wav，其它（mp3）存 .mp3
-    static func saveReference(_ data: Data) throws {
-        let isWav = data.count > 4 && String(data: data.prefix(4), encoding: .ascii) == "RIFF"
-        // 清掉另一种格式，避免两份
-        try? FileManager.default.removeItem(at: isWav ? referenceURLMP3 : referenceURL)
-        try data.write(to: isWav ? referenceURL : referenceURLMP3, options: .atomic)
-    }
-
-    static func clearReference() {
-        try? FileManager.default.removeItem(at: referenceURL)
-        try? FileManager.default.removeItem(at: referenceURLMP3)
-    }
-
     static var referenceURLMP3: URL { voiceDir().appendingPathComponent("reference.mp3") }
 
-    /// 当前参考音频文件（wav 优先，其次 mp3）
     static func currentReferenceFile() -> URL? {
         if FileManager.default.fileExists(atPath: referenceURL.path) { return referenceURL }
         if FileManager.default.fileExists(atPath: referenceURLMP3.path) { return referenceURLMP3 }
@@ -65,14 +58,37 @@ enum MiMoVoice {
         return f.pathExtension.lowercased() == "mp3" ? "audio/mpeg" : "audio/wav"
     }
 
+    static func hasReference() -> Bool { currentReferenceFile() != nil }
+
+    static func referenceSize() -> Int {
+        guard let f = currentReferenceFile() else { return 0 }
+        return (try? Data(contentsOf: f).count) ?? 0
+    }
+
+    /// 保存参考音频：wav 存 .wav，其它存 .mp3
+    static func saveReference(_ data: Data) throws {
+        let isWav = data.count > 4 && String(data: data.prefix(4), encoding: .ascii) == "RIFF"
+        try? FileManager.default.removeItem(at: isWav ? referenceURLMP3 : referenceURL)
+        try data.write(to: isWav ? referenceURL : referenceURLMP3, options: .atomic)
+    }
+
+    static func clearReference() {
+        try? FileManager.default.removeItem(at: referenceURL)
+        try? FileManager.default.removeItem(at: referenceURLMP3)
+    }
+
     private static func referenceDataURL() -> String? {
         guard let f = currentReferenceFile(),
               let data = try? Data(contentsOf: f), !data.isEmpty else { return nil }
         return "data:" + referenceMIME() + ";base64," + data.base64EncodedString()
     }
 
-    // MARK: - 合成
-    /// text: 要念的文本；instruction: 音色描述（voicedesign 用）
+    /// 参考音频上限（MiMo 的 base64 上限 10MB）
+    static let maxReferenceBytes = 7_000_000
+
+    // MARK: - 合成（整段一次，不重试）
+    /// voice: voicedesign 时不用；内置音色时是音色 id；克隆时不用
+    /// style: voicedesign 时是音色描述；内置音色/克隆时是风格指令
     static func synth(text: String,
                       voice: String,
                       style: String,
@@ -82,101 +98,111 @@ enum MiMoVoice {
         var root = base.trimmingCharacters(in: .whitespaces)
         while root.hasSuffix("/") { root.removeLast() }
         if root.hasSuffix("/chat/completions") { root = String(root.dropLast("/chat/completions".count)) }
-        guard let url = URL(string: root + "/chat/completions") else { return nil }
+        guard let url = URL(string: root + "/chat/completions") else {
+            lastError = "地址不合法"
+            return nil
+        }
 
         let lower = model.lowercased()
         let isClone = lower.contains("voiceclone")
         let isDesign = lower.contains("voicedesign")
 
-        var messages: [[String: String]] = [["role": "assistant", "content": text]]
-        if isDesign {
-            // voicedesign：user 必填，写音色描述（voice 字段放描述）
-            messages.insert(["role": "user", "content": style.isEmpty ? (voice.isEmpty ? "自然、清楚的中文女声" : voice) : style], at: 0)
-        } else if !style.isEmpty {
-            // 内置音色 / 克隆：user 当风格指令
-            messages.insert(["role": "user", "content": style], at: 0)
-        }
-
-        var audioField: [String: Any] = ["format": "wav"]
-        if isClone {
-            guard let ref = referenceDataURL() else { return nil }
-            audioField["voice"] = ref
-        } else if !isDesign {
-            // 内置音色：voice 传音色 id
-            let v = voice.trimmingCharacters(in: .whitespaces)
-            audioField["voice"] = v.isEmpty ? "mimo_default" : v
-        }
-
-        var body: [String: Any] = [
-            "model": model,
-            "messages": messages,
-            "stream": false,
-            "audio": audioField
-        ]
-
-        guard let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
-
-        // ① 缓存命中直接返回，一次请求都不发
+        // 缓存命中就不发请求
         let cacheVoice = isDesign ? style : voice
         if let hit = MiMoGuard.cached(text, voice: cacheVoice, style: style, model: model) {
             lastError = ""
             return hit
         }
 
+        var messages: [[String: String]] = []
+        var audioField: [String: Any] = ["format": "wav"]
+
+        if isClone {
+            guard let ref = referenceDataURL() else {
+                lastError = "没有参考音频"
+                return nil
+            }
+            // 克隆：只发 assistant，不传 user
+            messages = [["role": "assistant", "content": text]]
+            audioField["voice"] = ref
+        } else if isDesign {
+            // 设计：user = 音色描述，assistant = 要念的字；audio 不带 voice
+            let desc: String
+            if !style.trimmingCharacters(in: .whitespaces).isEmpty {
+                desc = style
+            } else {
+                desc = isHot(text) ? MiMoVoice.defaultDescHot : MiMoVoice.defaultDescNormal
+            }
+            messages = [
+                ["role": "user", "content": desc],
+                ["role": "assistant", "content": text]
+            ]
+        } else {
+            // 内置音色：voice 必须是那 9 个 id 之一
+            let v = voice.trimmingCharacters(in: .whitespaces)
+            audioField["voice"] = v.isEmpty ? "mimo_default" : v
+            messages = [["role": "assistant", "content": text]]
+            if !style.trimmingCharacters(in: .whitespaces).isEmpty {
+                messages.insert(["role": "user", "content": style], at: 0)
+            }
+        }
+
+        let body: [String: Any] = [
+            "model": model,
+            "messages": messages,
+            "stream": false,
+            "audio": audioField
+        ]
+        guard let payload = try? JSONSerialization.data(withJSONObject: body) else {
+            lastError = "请求体构造失败"
+            return nil
+        }
+
+        await MiMoGuard.waitTurn()
+
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.timeoutInterval = 60
+        req.timeoutInterval = 55          // 和 aurabot 一致
         req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = payload
 
-        // 小米会限流（429）和偶发 5xx：重试三次，指数退避
-        for attempt in 1...3 {
-            await MiMoGuard.waitTurn()      // ② 本地限速，两次请求至少隔 1 秒
-            lastError = ""
-            do {
-                let (data, resp) = try await URLSession.shared.data(for: req)
-                guard let http = resp as? HTTPURLResponse else {
-                    lastError = "无 HTTP 响应"
-                    continue
-                }
-                if (200..<300).contains(http.statusCode) {
-                    if let audio = parseAudio(data), !audio.isEmpty {
-                        MiMoGuard.store(audio, text: text, voice: cacheVoice, style: style, model: model)  // ④ 存缓存
-                        return audio
-                    }
-                    lastError = "HTTP 200 但没解析到音频"
-                    return nil
-                }
-                lastError = "HTTP \(http.statusCode)"
-                if let bodyText = String(data: data, encoding: .utf8), !bodyText.isEmpty {
-                    lastError += "：" + String(bodyText.prefix(80))
-                }
-                // 429 / 5xx 才值得重试
-                let retryable = http.statusCode == 429 || (500...599).contains(http.statusCode)
-                if !retryable { return nil }
-                var wait = pow(2.0, Double(attempt))     // 2s, 4s, 8s
-                if let hinted = MiMoGuard.retryAfter(http), hinted > 0 {
-                    wait = min(hinted, 10)               // ③ 服务端说等多久就等多久（最多 10 秒）
-                }
-                if wait > 6 { return nil }               // 太久就不等了，交给上层切本地
-                try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
-            } catch {
-                lastError = "网络异常：" + error.localizedDescription
-                try? await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(attempt)) * 1_000_000_000))
+        do {
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            guard let http = resp as? HTTPURLResponse else {
+                lastError = "无 HTTP 响应"
+                return nil
             }
+            guard (200..<300).contains(http.statusCode) else {
+                var msg = "HTTP \(http.statusCode)"
+                if let t = String(data: data, encoding: .utf8) {
+                    let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty { msg += "：" + String(trimmed.prefix(100)) }
+                }
+                lastError = msg
+                return nil                 // 不重试，交给上层切本地
+            }
+            guard let audio = parseAudio(data), !audio.isEmpty else {
+                lastError = "HTTP 200 但没返回音频"
+                return nil
+            }
+            MiMoGuard.store(audio, text: text, voice: cacheVoice, style: style, model: model)
+            lastError = ""
+            return audio
+        } catch {
+            lastError = "网络异常：" + error.localizedDescription
+            return nil
         }
-        return nil
     }
 
-    /// 带硬超时的合成：超时就返回 nil，不让界面一直转圈
+    /// 带硬超时的封装（界面用，防止极端情况转圈）
     static func synthWithTimeout(text: String,
                                  voice: String,
                                  style: String,
                                  base: String,
                                  apiKey: String,
                                  model: String,
-                                 seconds: Double = 45) async -> Data? {
+                                 seconds: Double = 60) async -> Data? {
         await withTaskGroup(of: Data?.self) { group in
             group.addTask {
                 await synth(text: text, voice: voice, style: style,
@@ -192,9 +218,6 @@ enum MiMoVoice {
         }
     }
 
-    /// 参考音频安全上限（MiMo 的 base64 上限 10MB，原文件控制在此之下）
-    static let maxReferenceBytes = 7_000_000
-
     private static func parseAudio(_ data: Data) -> Data? {
         guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let choices = obj["choices"] as? [[String: Any]],
@@ -207,81 +230,46 @@ enum MiMoVoice {
     }
 
     // MARK: - WAV 工具
-    /// 把多段 16bit PCM WAV 拼成一段（只处理同采样率同声道）
+    /// 把多段 16bit PCM WAV 拼成一段（克隆参考音频用）
     static func concatWAV(_ datas: [Data]) -> Data? {
         guard !datas.isEmpty else { return nil }
         if datas.count == 1 { return datas[0] }
 
         var pcm = Data()
-        var sampleRate: UInt32 = 24000
-        var channels: UInt16 = 1
-        var bits: UInt16 = 16
         var headerTemplate: Data?
-
         for d in datas {
             guard let parsed = splitWAV(d) else { continue }
-            sampleRate = parsed.sampleRate
-            channels = parsed.channels
-            bits = parsed.bits
             headerTemplate = parsed.header
             pcm.append(parsed.pcm)
         }
-        guard !pcm.isEmpty, let tpl = headerTemplate else { return nil }
+        guard !pcm.isEmpty, var out = headerTemplate else { return nil }
 
-        var out = tpl
-        // 修正 RIFF 与 data 长度
         let total = UInt32(pcm.count)
         if out.count >= 44 {
-            let riffSize = total + 36
-            out.replaceSubrange(4..<8, with: withUnsafeBytes(of: riffSize.littleEndian) { Data($0) })
-            let dataSize = total
-            // 找 "data" 标记
+            out.replaceSubrange(4..<8, with: withUnsafeBytes(of: (total + 36).littleEndian) { Data($0) })
             if let r = out.range(of: Data("data".utf8)) {
                 let idx = r.lowerBound
                 if idx + 8 <= out.count {
                     out.replaceSubrange((idx + 4)..<(idx + 8),
-                                        with: withUnsafeBytes(of: dataSize.littleEndian) { Data($0) })
+                                        with: withUnsafeBytes(of: total.littleEndian) { Data($0) })
                 }
             }
         }
         out.append(pcm)
-        _ = (sampleRate, channels, bits)
         return out
     }
 
     private struct WAVParts {
         var header: Data
         var pcm: Data
-        var sampleRate: UInt32
-        var channels: UInt16
-        var bits: UInt16
     }
 
     private static func splitWAV(_ d: Data) -> WAVParts? {
         guard d.count > 44,
-              let riff = d.range(of: Data("RIFF".utf8)),
-              riff.lowerBound == 0,
-              let fmt = d.range(of: Data("fmt ".utf8)),
+              d.range(of: Data("RIFF".utf8))?.lowerBound == 0,
               let dataRange = d.range(of: Data("data".utf8)) else { return nil }
-
-        let fmtStart = fmt.lowerBound
-        func u16(_ off: Int) -> UInt16 {
-            guard off + 2 <= d.count else { return 0 }
-            return d.subdata(in: off..<(off + 2)).withUnsafeBytes { $0.load(as: UInt16.self) }
-        }
-        func u32(_ off: Int) -> UInt32 {
-            guard off + 4 <= d.count else { return 0 }
-            return d.subdata(in: off..<(off + 4)).withUnsafeBytes { $0.load(as: UInt32.self) }
-        }
-
-        let channels = u16(fmtStart + 10)
-        let sampleRate = u32(fmtStart + 12)
-        let bits = u16(fmtStart + 22)
-
         let pcmStart = dataRange.lowerBound + 8
         guard pcmStart <= d.count else { return nil }
-        let pcm = d.subdata(in: pcmStart..<d.count)
-        let header = d.subdata(in: 0..<pcmStart)
-        return WAVParts(header: header, pcm: pcm, sampleRate: sampleRate, channels: channels, bits: bits)
+        return WAVParts(header: d.subdata(in: 0..<pcmStart), pcm: d.subdata(in: pcmStart..<d.count))
     }
 }
