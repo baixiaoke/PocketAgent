@@ -229,6 +229,11 @@ struct ChatView: View {
                                 }
                             }
                     }
+                    if rt.isTyping {
+                        TypingIndicator()
+                            .padding(.leading, 8)
+                            .transition(.opacity)
+                    }
                     Color.clear.frame(height: 1).id("bottom")
                 }
                 .padding(.horizontal, 14)
@@ -453,7 +458,7 @@ struct MessageRow: View {
         case .assistant:
             VStack(alignment: .leading, spacing: 10) {
                 // 「||| 分隔」按人格设定拆成多个气泡，像连发消息
-                ForEach(Array(Self.splitBubbles(message.content).enumerated()), id: \.offset) { idx, part in
+                ForEach(Array(BubbleSplitter.split(message.content).enumerated()), id: \.offset) { idx, part in
                     MarkdownText(text: part)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
@@ -472,6 +477,10 @@ struct MessageRow: View {
                     .background(Theme.violet.opacity(0.15), in: Capsule())
                     .foregroundStyle(Theme.violet)
                 }
+                Text(Self.timeText(message.createdAt))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.28))
+                    .padding(.leading, 6)
                 Spacer(minLength: 0)
             }
 
@@ -651,5 +660,40 @@ extension MessageRow {
             return head + [rest]
         }
         return parts
+    }
+}
+
+extension MessageRow {
+    /// 时间戳：今天只显示时分，昨天显示「昨天」，更早显示日期
+    static func timeText(_ date: Date) -> String {
+        let cal = Calendar.current
+        let f = DateFormatter()
+        if cal.isDateInToday(date) {
+            f.dateFormat = "HH:mm"
+            return f.string(from: date)
+        }
+        if cal.isDateInYesterday(date) { return "昨天" }
+        f.dateFormat = "M月d日"
+        return f.string(from: date)
+    }
+}
+
+/// 「对方正在输入」的三个点
+struct TypingIndicator: View {
+    @State private var phase = 0
+    private let timer = Timer.publish(every: 0.45, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .fill(Theme.cyan.opacity(phase == i ? 0.95 : 0.35))
+                    .frame(width: 6, height: 6)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .glassCard(radius: 16, tint: Theme.cyan)
+        .onReceive(timer) { _ in phase = (phase + 1) % 3 }
     }
 }

@@ -8,6 +8,8 @@ final class AgentRuntime: ObservableObject {
 
     @Published var sessions: [ChatSession] = []
     @Published var current: ChatSession
+    /// 正在「打字」（分条发送的间隙，用来显示三个点）
+    @Published var isTyping = false
     @Published var isRunning = false
     @Published var statusLine: String = ""
     @Published var errorText: String?
@@ -150,6 +152,25 @@ final class AgentRuntime: ObservableObject {
                 if cleaned.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     current.messages[idx].content = "（模型返回了空内容）"
                 } else {
+                    // 像真人连发：拆成几条，逐条隔一会儿出现
+                    let parts = BubbleSplitter.split(cleaned)
+                    if parts.count <= 1 {
+                        current.messages[idx].content = cleaned
+                    } else {
+                        current.messages[idx].content = parts[0]
+                        persist()
+                        for part in parts.dropFirst() {
+                            if Task.isCancelled { break }
+                            isTyping = true
+                            let delay = BubbleSplitter.typingDelay(for: part)
+                            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                            isTyping = false
+                            if Task.isCancelled { break }
+                            current.messages.append(.assistant(part))
+                            persist()
+                        }
+                        isTyping = false
+                    }
                     lastAssistantText = cleaned
                 }
 
