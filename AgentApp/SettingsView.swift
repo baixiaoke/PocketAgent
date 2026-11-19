@@ -83,7 +83,11 @@ struct SettingsView: View {
                     Toggle("打开时用 Face ID 解锁", isOn: $requireBiometric)
                     Toggle("危险操作先问我", isOn: $requireApproval)
                     Toggle("回答自动念出来", isOn: $autoSpeak)
+                        .disabled(replyAsVoice)
                     Toggle("回复显示成语音条（点一下才播）", isOn: $replyAsVoice)
+                        .onChange(of: replyAsVoice) { on in
+                            if on { autoSpeak = false }   // 两者互斥
+                        }
                     HStack {
                         Text("语速")
                         Slider(value: $speechRate, in: 0.35...0.6, step: 0.01)
@@ -345,8 +349,8 @@ struct SettingsView: View {
         s.temperature = temperature
         s.maxRounds = maxRounds
         s.requireApproval = requireApproval
-        s.autoSpeak = autoSpeak
         s.replyAsVoice = replyAsVoice
+        s.autoSpeak = replyAsVoice ? false : autoSpeak
         s.speechRate = speechRate
         s.agentName = agentName.isEmpty ? "青露" : agentName
         s.userTitle = userTitle.isEmpty ? "主人" : userTitle

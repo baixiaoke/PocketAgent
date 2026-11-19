@@ -182,6 +182,9 @@ final class VoiceOut: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     private var lastText: String = ""
     private var lastAt = Date.distantPast
 
+    /// 全局唯一播放器：避免两套同时出声
+    static let shared = VoiceOut()
+
     private let synth = AVSpeechSynthesizer()
     private var player: AVAudioPlayer?
     var rate: Float = 0.48

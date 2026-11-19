@@ -65,7 +65,7 @@ struct CallView: View {
     @Environment(\.dismiss) private var dismiss
 
     @StateObject private var speech = SpeechEngine()
-    @StateObject private var voice = VoiceOut()
+    @StateObject private var voice = VoiceOut.shared
     @StateObject private var camera = CameraController()
     @ObservedObject private var themeMgr = ThemeManager.shared
 

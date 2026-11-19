@@ -21,7 +21,7 @@ struct ChatView: View {
     @State private var renamingCurrent = false
     @State private var titleDraft = ""
     @ObservedObject private var mood = MoodStore.shared
-    @StateObject private var tts = VoiceOut()
+    @StateObject private var tts = VoiceOut.shared
     private var voiceBusy: Bool { tts.isSpeaking }
     @State private var editing: ChatMessage?
     @StateObject private var dictation = SpeechEngine()
@@ -171,7 +171,7 @@ struct ChatView: View {
             }
             .onChange(of: rt.isRunning) { running in
                 // 聊天页也支持「回答自动念出来」，通话页自己会念，别重复
-                guard !running, rt.settings.autoSpeak, !showCall else { return }
+                guard !running, rt.settings.autoSpeak, !rt.settings.replyAsVoice, !showCall else { return }
                 let reply = rt.lastAssistantText
                 guard !reply.isEmpty else { return }
                 let s = rt.settings
@@ -708,7 +708,7 @@ struct TypingIndicator: View {
 struct VoiceBar: View {
     let text: String
 
-    @StateObject private var tts = VoiceOut()
+    @StateObject private var tts = VoiceOut.shared
     @State private var playing = false
 
     private var seconds: Int {
