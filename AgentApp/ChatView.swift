@@ -191,7 +191,7 @@ struct ChatView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     ForEach(rt.current.messages.filter { $0.role != .system }) { msg in
-                        MessageRow(message: msg)
+                        MessageRow(message: msg, voiceBar: rt.settings.replyAsVoice)
                             .id(msg.id)
                             .contextMenu {
                                 Button {
@@ -439,6 +439,7 @@ struct ChatView: View {
 // MARK: - 单条消息
 struct MessageRow: View {
     let message: ChatMessage
+    var voiceBar: Bool = false
 
     var body: some View {
         switch message.role {
@@ -461,7 +462,7 @@ struct MessageRow: View {
         case .assistant:
             VStack(alignment: .leading, spacing: 10) {
                 // 「||| 分隔」按人格设定拆成多个气泡，像连发消息
-                if rt.settings.replyAsVoice {
+                if voiceBar {
                     VoiceBar(text: message.content)
                         .padding(.leading, 6)
                 }
