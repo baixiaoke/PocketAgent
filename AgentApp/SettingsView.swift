@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var maxRounds = Store.shared.settings.maxRounds
     @State private var requireApproval = Store.shared.settings.requireApproval
     @State private var autoSpeak = Store.shared.settings.autoSpeak
+    @State private var replyAsVoice = Store.shared.settings.replyAsVoice
     @State private var speechRate = Store.shared.settings.speechRate
     @State private var agentName = Store.shared.settings.agentName
     @State private var userTitle = Store.shared.settings.userTitle
@@ -82,6 +83,7 @@ struct SettingsView: View {
                     Toggle("打开时用 Face ID 解锁", isOn: $requireBiometric)
                     Toggle("危险操作先问我", isOn: $requireApproval)
                     Toggle("回答自动念出来", isOn: $autoSpeak)
+                    Toggle("回复显示成语音条（点一下才播）", isOn: $replyAsVoice)
                     HStack {
                         Text("语速")
                         Slider(value: $speechRate, in: 0.35...0.6, step: 0.01)
@@ -344,6 +346,7 @@ struct SettingsView: View {
         s.maxRounds = maxRounds
         s.requireApproval = requireApproval
         s.autoSpeak = autoSpeak
+        s.replyAsVoice = replyAsVoice
         s.speechRate = speechRate
         s.agentName = agentName.isEmpty ? "青露" : agentName
         s.userTitle = userTitle.isEmpty ? "主人" : userTitle

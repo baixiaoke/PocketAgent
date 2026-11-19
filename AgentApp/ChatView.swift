@@ -243,6 +243,7 @@ struct ChatView: View {
                 withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo("bottom", anchor: .bottom) }
             }
             .onAppear {
+                rt.maybeSpeakFirst()
                 // 进入聊天立刻定位到最新一条
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
                     proxy.scrollTo("bottom", anchor: .bottom)
@@ -353,6 +354,7 @@ struct ChatView: View {
                         .stroke(focused ? Theme.cyan.opacity(0.55) : Color.white.opacity(0.08), lineWidth: 0.8)
                 )
                 .focused($focused)
+                .onChange(of: draft) { v in rt.userTyping = !v.isEmpty }
                 .disabled(rt.isRunning)
 
             if rt.isRunning {
@@ -396,6 +398,7 @@ struct ChatView: View {
             dictation.stop()
             dictating = false
         }
+        rt.markUserActivity()
         rt.start(text)
     }
 
@@ -458,6 +461,10 @@ struct MessageRow: View {
         case .assistant:
             VStack(alignment: .leading, spacing: 10) {
                 // 「||| 分隔」按人格设定拆成多个气泡，像连发消息
+                if rt.settings.replyAsVoice {
+                    VoiceBar(text: message.content)
+                        .padding(.leading, 6)
+                }
                 ForEach(Array(BubbleSplitter.split(message.content).enumerated()), id: \.offset) { idx, part in
                     MarkdownText(text: part)
                         .padding(.horizontal, 14)
@@ -695,5 +702,49 @@ struct TypingIndicator: View {
         .padding(.vertical, 11)
         .glassCard(radius: 16, tint: Theme.cyan)
         .onReceive(timer) { _ in phase = (phase + 1) % 3 }
+    }
+}
+/// 微信式语音条：点一下才合成播放，长度按字数估算
+struct VoiceBar: View {
+    let text: String
+
+    @StateObject private var tts = VoiceOut()
+    @State private var playing = false
+
+    private var seconds: Int {
+        max(1, min(60, Int(Double(text.count) * 0.18)))
+    }
+    private var width: CGFloat {
+        90 + min(120, CGFloat(seconds) * 4)
+    }
+
+    var body: some View {
+        Button {
+            if playing {
+                tts.stop()
+                playing = false
+                return
+            }
+            playing = true
+            let s = Store.shared.settings
+            Task {
+                await tts.speakSmart(text, settings: s, fallbackKey: Store.shared.apiKey)
+                await MainActor.run { playing = false }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: playing ? "waveform" : "play.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("\(seconds)\"")
+                    .font(.caption2.monospaced())
+            }
+            .foregroundStyle(Theme.cyan)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(width: width, alignment: .leading)
+            .background(Theme.cyan.opacity(0.10), in: Capsule())
+            .overlay(Capsule().stroke(Theme.cyan.opacity(0.30), lineWidth: 0.7))
+        }
+        .buttonStyle(.plain)
     }
 }

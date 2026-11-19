@@ -98,6 +98,7 @@ struct AgentSettings: Codable, Equatable {
     var moodAffectsVoice: Bool = false      // 情绪是否影响朗读语气（默认关，避免音色漂移）
     var ttsStyle: String = ""               // 额外的风格指令（内置音色/克隆模型用）
     var ttsChunkLimit: Int = 400            // 云端分段长度：越大请求越少，首字越慢
+    var replyAsVoice: Bool = false          // 回复以语音条形式出现（点一下才播）
 
     /// 旧版用户可编辑的系统提示词：只用于迁移，不再参与拼装
     var systemPrompt: String = ""
@@ -154,6 +155,7 @@ struct AgentSettings: Codable, Equatable {
         moodAffectsVoice = (try? c.decodeIfPresent(Bool.self, forKey: .moodAffectsVoice)) ?? moodAffectsVoice
         ttsStyle = (try? c.decodeIfPresent(String.self, forKey: .ttsStyle)) ?? ttsStyle
         ttsChunkLimit = (try? c.decodeIfPresent(Int.self, forKey: .ttsChunkLimit)) ?? ttsChunkLimit
+        replyAsVoice = (try? c.decodeIfPresent(Bool.self, forKey: .replyAsVoice)) ?? replyAsVoice
         systemPrompt = (try? c.decodeIfPresent(String.self, forKey: .systemPrompt)) ?? systemPrompt
     }
 
@@ -219,6 +221,11 @@ struct AgentSettings: Codable, Equatable {
         }
 
         out += "\n\n【工具与能力】\n" + AgentSettings.toolBrief
+
+        let sched = Humanize.scheduleHint(hour: Humanize.hour())
+        if !sched.isEmpty {
+            out += "\n\n【作息】" + sched
+        }
 
         let mood = MoodStore.shared.current
         out += "\n\n【你现在的状态】\(mood.promptLine)\n\(mood.behavior)"

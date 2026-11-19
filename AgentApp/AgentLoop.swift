@@ -10,6 +10,8 @@ final class AgentRuntime: ObservableObject {
     @Published var current: ChatSession
     /// 正在「打字」（分条发送的间隙，用来显示三个点）
     @Published var isTyping = false
+    /// 用户正在输入框里打字，先别抢话
+    @Published var userTyping = false
     @Published var isRunning = false
     @Published var statusLine: String = ""
     @Published var errorText: String?
@@ -153,6 +155,12 @@ final class AgentRuntime: ObservableObject {
                     current.messages[idx].content = "（模型返回了空内容）"
                 } else {
                     // 像真人连发：拆成几条，逐条隔一会儿出现
+                    // 他正在打字就先等着，别插话（最多等 8 秒）
+                    var waited = 0.0
+                    while userTyping && waited < 8 {
+                        try? await Task.sleep(nanoseconds: 300_000_000)
+                        waited += 0.3
+                    }
                     let parts = BubbleSplitter.split(cleaned)
                     if parts.count <= 1 {
                         current.messages[idx].content = cleaned
@@ -272,6 +280,40 @@ final class AgentRuntime: ObservableObject {
         current.messages = Array(current.messages.prefix(idx))
         persist()
         start(newText)
+    }
+
+    /// 主动开口：久未说话就由它先说一句；回来晚了会抱怨一句
+    func maybeSpeakFirst() {
+        guard !isRunning else { return }
+        let p = Presence.shared
+        let gap = p.idleHours
+
+        // 今天已经主动过一次就不再来
+        if p.proactiveToday { return }
+        // 会话里已有内容才主动（新会话留空给用户）
+        guard !current.messages.filter({ $0.role == .user }).isEmpty else { return }
+
+        var line: String?
+        if gap >= 12 {
+            line = Humanize.neglectedLine(gapHours: gap)
+        } else if gap >= 4 {
+            let hint = LongTermMemory.shared.items.first?.text
+            line = Humanize.proactiveLine(name: store.settings.agentName,
+                                          hour: Humanize.hour(),
+                                          memoryHint: hint)
+        }
+        guard let text = line else { return }
+
+        current.messages.append(.assistant(text))
+        current.updatedAt = Date()
+        lastAssistantText = text
+        p.markProactive()
+        persist()
+    }
+
+    /// 记录用户刚发了消息
+    func markUserActivity() {
+        Presence.shared.markUserMessage()
     }
 
     /// 改名：列表和当前会话同步
