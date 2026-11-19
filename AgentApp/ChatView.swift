@@ -237,6 +237,24 @@ struct ChatView: View {
             .onChange(of: rt.current.messages.count) { _ in
                 withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo("bottom", anchor: .bottom) }
             }
+            .onAppear {
+                // 进入聊天立刻定位到最新一条
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            }
+            .onChange(of: rt.current.id) { _ in
+                // 切换会话（包括从历史列表进来）也定位到最新
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            }
         }
     }
 
