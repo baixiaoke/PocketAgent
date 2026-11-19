@@ -12,6 +12,9 @@ struct SpeechModelPage: View {
     @State private var moodAffectsVoice = Store.shared.settings.moodAffectsVoice
     @State private var chunkLimit = Store.shared.settings.ttsChunkLimit
     @State private var cacheKB = MiMoGuard.cacheSize() / 1024
+    @State private var netStatus = ""
+    @State private var checking = false
+    @ObservedObject private var net = NetMonitor.shared
 
     @State private var models: [String] = []
     @State private var voices: [String] = []
@@ -154,6 +157,31 @@ struct SpeechModelPage: View {
             }
             if let s = status {
                 Text(s).font(.caption).foregroundStyle(s.hasPrefix("✅") ? .green : .orange)
+            }
+
+            HStack {
+                Label("设备网络", systemImage: net.online ? "wifi" : "wifi.slash")
+                Spacer()
+                Text(net.summary)
+                    .font(.caption)
+                    .foregroundStyle(net.online ? Theme.mint : Theme.amber)
+            }
+
+            Button {
+                Task { await checkReach() }
+            } label: {
+                HStack {
+                    Label("测服务端连通", systemImage: "antenna.radiowaves.left.and.right")
+                    Spacer()
+                    if checking { ProgressView() }
+                }
+            }
+            .disabled(checking || base.isEmpty)
+
+            if !netStatus.isEmpty {
+                Text(netStatus)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
             }
         } header: {
             Text("接口")
@@ -385,6 +413,14 @@ struct SpeechModelPage: View {
 
     // MARK: - 逻辑
     private var useKey: String { key.isEmpty ? Store.shared.apiKey : key }
+
+    private func checkReach() async {
+        checking = true
+        netStatus = "正在测 \(base) …"
+        let (ok, msg) = await NetMonitor.reachable(base)
+        checking = false
+        netStatus = (ok ? "✅ " : "❌ ") + msg
+    }
 
     private func detectModels() async {
         busy = true
