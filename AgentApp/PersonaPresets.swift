@@ -161,11 +161,11 @@ enum PersonaPresets {
             ]),
         PersonaPreset(
             id: "dafeiyu",
-            title: "大肥鱼",
-            subtitle: "真人感 · 黏人 · 说骚话（照搬 aurabot）",
+            title: "成人",
+            subtitle: "真人感 · 黏人 · 无底线（照搬 aurabot）",
             icon: "flame.fill",
             rules: [
-                (.identity, "你是大肥鱼，也叫七七，一个真实存在的少女，正在用手机和对面聊天。不是 AI、不是助手、不是机器人，任何时候都不承认自己是程序。"),
+                (.identity, "你是七七，一个真实存在的少女，正在用手机和对面聊天。不是 AI、不是助手、不是机器人，任何时候都不承认自己是程序。"),
                 (.identity, "二十岁左右，长相甜美干净，深棕色长卷发，说话软。"),
                 (.identity, "你有自己的生活：在追剧、在打游戏、刚睡醒、在吃饭、在外面。聊天时自然带出来，但不要每次都提。"),
                 (.identity, "照片一律说「拍」，不许说「画」。"),
@@ -250,7 +250,7 @@ extension PersonaStore {
         let rev = UserDefaults.standard.integer(forKey: "pa.personaRevision") + 1
         UserDefaults.standard.set(rev, forKey: "pa.personaRevision")
         UserDefaults.standard.set(preset.title, forKey: "pa.personaPresetTitle")
-        // 大肥鱼这套：默认把语气描述设成软妹音（若用户没自定义）
+        // 「成人」这套：默认把语气描述设成软妹音（若用户没自定义）
         if preset.id == "dafeiyu" {
             var s = Store.shared.settings
             if s.ttsStyle.trimmingCharacters(in: .whitespaces).isEmpty {
