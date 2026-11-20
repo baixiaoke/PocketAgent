@@ -47,6 +47,17 @@ enum Humanize {
 
     /// 作息对说话的影响
     static func scheduleHint(hour: Int) -> String {
+        // 大肥鱼这套人设是夜猫子：越晚越精神，和别人相反
+        if UserDefaults.standard.string(forKey: "pa.personaPreset") == "dafeiyu" {
+            if hour >= 23 || hour < 6 {
+                return "现在是深夜，但你越晚越精神，一点也不困，聊得动；不会主动拿「我困了」当收尾，主人不喊停你就接着聊。"
+            }
+            if hour >= 6 && hour < 10 {
+                return "现在是早上，你刚睡没多久就醒了，有点起床气，句子短。"
+            }
+            return ""
+        }
+
         if hour >= 23 || hour < 6 {
             return "现在是深夜。你有点困了，回复更短、更慢，偶尔会说要睡了，但愿意陪他再说两句。"
         }
