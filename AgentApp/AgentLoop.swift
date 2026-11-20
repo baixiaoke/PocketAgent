@@ -44,6 +44,7 @@ final class AgentRuntime: ObservableObject {
 
     // MARK: - 对外入口
     func start(_ text: String) {
+        syncPersonaSwitch()
         guard runTask == nil else { return }
         runTask = Task { [weak self] in
             await self?.run(text)
@@ -282,6 +283,18 @@ final class AgentRuntime: ObservableObject {
         start(newText)
     }
 
+    /// 人格换过之后，提醒一次：别模仿上面的旧语气
+    func syncPersonaSwitch() {
+        let rev = UserDefaults.standard.integer(forKey: "pa.personaRevision")
+        let seen = UserDefaults.standard.integer(forKey: "pa.personaSeenRevision")
+        guard rev != seen else { return }
+        UserDefaults.standard.set(rev, forKey: "pa.personaSeenRevision")
+        guard rev > 0 else { return }
+
+        // 具体提醒由 composedPrompt 注入；这里只负责「少带历史」的标记
+        UserDefaults.standard.set(1, forKey: "pa.trimHistoryOnce")
+    }
+
     /// 主动开口：久未说话就由它先说一句；回来晚了会抱怨一句
     func maybeSpeakFirst() {
         guard !isRunning else { return }
@@ -341,7 +354,15 @@ final class AgentRuntime: ObservableObject {
     /// 系统提示词每次现拼（人设 + 记忆），不进会话存储
     private func trimmedHistory(_ messages: [ChatMessage]) -> [ChatMessage] {
         var body = messages.filter { $0.role != .system }
-        if body.count > historyLimit { body = Array(body.suffix(historyLimit)) }
+
+        // 人格刚切换：这次只带最近几条，避免模型模仿旧语气
+        var limit = historyLimit
+        if UserDefaults.standard.integer(forKey: "pa.trimHistoryOnce") == 1 {
+            limit = min(limit, 4)
+            UserDefaults.standard.set(0, forKey: "pa.trimHistoryOnce")
+        }
+
+        if body.count > limit { body = Array(body.suffix(limit)) }
         return [.system(store.settings.composedPrompt())] + body
     }
 

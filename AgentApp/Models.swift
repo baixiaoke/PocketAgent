@@ -220,6 +220,13 @@ struct AgentSettings: Codable, Equatable {
             out += "\n专注把事办完，不必寒暄。"
         }
 
+        // 人格刚切换过：插一条一次性提醒，并让这次请求少带历史
+        if let note = UserDefaults.standard.string(forKey: "pa.personaNote"), !note.isEmpty {
+            out += "\n\n" + note
+            UserDefaults.standard.removeObject(forKey: "pa.personaNote")
+            UserDefaults.standard.set(1, forKey: "pa.trimHistoryOnce")
+        }
+
         out += "\n\n【工具与能力】\n" + AgentSettings.toolBrief
 
         let sched = Humanize.scheduleHint(hour: Humanize.hour())

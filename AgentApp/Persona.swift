@@ -115,6 +115,8 @@ final class PersonaStore: ObservableObject {
 
     /// 老数据没有「打字习惯」时补进去（已存在就跳过）
     func ensureTypingSeeds() {
+        // 用户套用过预设时，预设自带的打字规则就是唯一标准，别再加默认的（会打架）
+        if UserDefaults.standard.string(forKey: "pa.personaPreset") != nil { return }
         guard !rules.contains(where: { $0.category == .typing }) else { return }
         let existing = Set(rules.map { $0.text })
         var added = false

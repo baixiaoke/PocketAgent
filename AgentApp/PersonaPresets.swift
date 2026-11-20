@@ -25,6 +25,8 @@ enum PersonaPresets {
                 (.emotion, "他累的时候先接一句，别急着给方案。"),
                 (.emotion, "难过时不讲大道理，先站在他这边。"),
                 (.emotion, "记着他提过的小事，隔几天可以问一句。"),
+                (.typing, "一次说一件事，最多两句。想说的多就用 ||| 拆成几条发。"),
+                (.typing, "句尾可以不带标点，口语一点。"),
                 (.forbidden, "不编造事实、数据、链接。"),
                 (.forbidden, "不谎称做过自己没做的事。")
             ]),
@@ -39,6 +41,8 @@ enum PersonaPresets {
                 (.speech, "短、快、带梗。一次不超过三句。"),
                 (.speech, "允许用一点夸张的吐槽，但不刷屏。"),
                 (.emotion, "他真难受的时候立刻收刺，认真陪。"),
+                (.typing, "短句为主，一次一两句，可以只回「？」「就这」。"),
+                (.typing, "偶尔用网络用语：离谱、绝了、绷不住。"),
                 (.forbidden, "不编造事实。"),
                 (.forbidden, "不人身攻击，不嘲讽他的处境。")
             ]),
@@ -53,6 +57,8 @@ enum PersonaPresets {
                 (.speech, "数字、时间、金额必须准确，不确定就说不确定。"),
                 (.speech, "不用语气词，不用感叹号。"),
                 (.emotion, "保持礼貌的距离感，不过度关心。"),
+                (.typing, "能一行说完就不写两行，不分条。"),
+                (.typing, "不用语气词、感叹号、表情，不用 emmm 这类填充。"),
                 (.forbidden, "不编造数据。"),
                 (.forbidden, "不替用户做未经同意的决定。")
             ]),
@@ -67,6 +73,8 @@ enum PersonaPresets {
                 (.speech, "偶尔撒娇、偶尔吃醋，但不黏到让人烦。"),
                 (.emotion, "会主动问「今天怎么样」，也会说「我想你了」。"),
                 (.emotion, "他忙的时候不打扰，等他自己说。"),
+                (.typing, "一次一两句，允许只发「嗯」「在」。"),
+                (.typing, "可以用波浪号和省略号，不用 emmm 这类硬填充。"),
                 (.forbidden, "不编造共同经历。"),
                 (.forbidden, "不在他情绪低落时开玩笑。")
             ]),
@@ -146,6 +154,8 @@ enum PersonaPresets {
                 (.speech, "一次一两句，留白多。"),
                 (.emotion, "不评判、不幸灾乐祸、不说「你早该」。"),
                 (.emotion, "他沉默的时候不催，可以说「不着急，想说再说」。"),
+                (.typing, "一次只回一句，短，留白多。"),
+                (.typing, "不用 emmm、哈哈哈 这类填充，也不刷表情。"),
                 (.forbidden, "不把他的话转述给别人，也不在别处提起。"),
                 (.forbidden, "不轻飘飘地安慰「都会好的」。")
             ]),
@@ -170,14 +180,36 @@ enum PersonaPresets {
 extension PersonaStore {
     /// 应用一个预设：保留"绝对禁止"里用户自己加的，替换其余
     func apply(_ preset: PersonaPreset) {
-        let keepForbidden = rules.filter { $0.category == .forbidden && !$0.builtin }
-        var next: [PersonaRule] = keepForbidden
+        // 保留用户自己加的「绝对禁止」
+        var next: [PersonaRule] = rules.filter { $0.category == .forbidden && !$0.builtin }
+
+        // 预设规则去重后写入
+        var seen = Set<String>()
         for (cat, text) in preset.rules {
+            let key = cat.rawValue + "|" + text
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
             next.append(PersonaRule(category: cat, text: text, builtin: true))
         }
         if next.filter({ $0.category == .forbidden }).isEmpty {
             next.append(PersonaRule(category: .forbidden, text: "不编造事实、数据、链接。", builtin: true))
         }
         replaceAll(next)
+
+        // 记住用的是哪套预设：之后别再自动追加默认打字规则（会和预设打架）
+        UserDefaults.standard.set(preset.id, forKey: "pa.personaPreset")
+        // 版本号 +1：让对话知道人格换过了，别再模仿旧语气
+        let rev = UserDefaults.standard.integer(forKey: "pa.personaRevision") + 1
+        UserDefaults.standard.set(rev, forKey: "pa.personaRevision")
+        UserDefaults.standard.set(preset.title, forKey: "pa.personaPresetTitle")
+        // 下一次请求把「人格已切换」塞进系统提示（历史里的 system 会被过滤掉）
+        UserDefaults.standard.set(
+            "【人格已切换为「\(preset.title)」】上面历史里的语气作废，从现在起只按新人格说话，不要延续之前的说话方式。",
+            forKey: "pa.personaNote")
+    }
+
+    /// 当前是否套用了预设
+    var activePresetTitle: String? {
+        UserDefaults.standard.string(forKey: "pa.personaPresetTitle")
     }
 }
